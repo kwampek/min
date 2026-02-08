@@ -1,0 +1,207 @@
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background-color: #121212;
+    color: #fff;
+    display: flex;
+}
+
+#root {
+    height: 100%;
+    display: flex;
+    min-height: 100vh;
+    width: 100%;
+}
+
+.settings-box,
+.settings-profile-box,
+.settings-gos-uslugi-box {
+    display: flex;
+    flex-direction: row;
+    min-height: 100vh;
+    width: 100%;
+    background-color: #121212;
+    color: #fff;
+}
+
+.sidebar {
+    width: 25%;
+    min-width: 260px;
+    background-color: #1e1e1e;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
+    box-sizing: border-box;
+}
+
+.back-button {
+    display: inline-block;
+    padding: 10px 15px;
+    margin-bottom: 20px;
+    background-color: #333;
+    color: #fff;
+    text-decoration: none;
+    border-radius: 8px;
+    font-size: 14px;
+}
+
+.back-button:hover {
+    background-color: #1e90ff;
+}
+
+.settings-profile {
+    display: flex;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.settings-profile img {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    margin-right: 10px;
+}
+
+.username {
+    font-weight: bold;
+}
+
+.search-box {
+    border-bottom: 1px solid #333;
+}
+
+.search-box input {
+    height: 36px;
+    width: 100%;
+    background-color: #333;
+    border: none;
+    color: #e0e0e0;
+    border-radius: 10px;
+    outline: none;
+    box-sizing: border-box;
+}
+
+.menu {
+    flex: 1;
+}
+
+.menu a {
+    display: block;
+    padding: 10px 0;
+    color: #fff;
+    text-decoration: none;
+}
+
+.menu a:hover {
+    color: #1e90ff;
+}
+
+.content {
+    flex-grow: 1;
+    padding: 40px;
+    box-sizing: border-box;
+}
+
+.section {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.section a {
+    padding: 15px;
+    background-color: #1e1e1e;
+    border-radius: 8px;
+    text-decoration: none;
+    color: #fff;
+}
+
+.section a:hover {
+    background-color: #333;
+}
+
+/* ---------- PROFILE ---------- */
+
+.settings-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 30px;
+}
+
+.profile-image-box {
+    width: 200px;
+    height: 200px;
+    border-radius: 50%;
+    overflow: hidden;
+}
+
+.profile-image-box img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.profile-info-box {
+    width: 100%;
+    max-width: 400px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.profile-info-box input {
+    padding: 10px;
+    background-color: #333;
+    border: none;
+    color: #e0e0e0;
+    border-radius: 8px;
+}
+
+.profile-info-box button {
+    padding: 10px;
+    background-color: #1e90ff;
+    border: none;
+    color: #fff;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+.profile-info-box button:hover {
+    background-color: #0066cc;
+}
+
+/* ---------- GOSUSLUGI ---------- */
+
+.settings-gos-uslugi-content {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-grow: 1;
+    height: 100vh;
+    overflow: hidden;
+}
+
+.settings-gos-uslugi-content img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+
+.logout-button {
+    margin-top: auto;
+    background-color: #1e1e1e;
+    border: none;
+    color: #ff0000;
+    font-size: 16px;
+    padding: 10px 0px;
+}
+
+.logout-button:hover {
+    color: #860000;
+}
