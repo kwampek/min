@@ -19,8 +19,8 @@ Frontend часть мессенджера **MIN** с импользование
 ## Запуск
 
 ```
-git clone https://github.com/yourusername/min-frontend.git
-cd min-frontend
+git clone https://github.com/kwampek/min.git
+cd min
 npm install
 npm run dev
 ```
