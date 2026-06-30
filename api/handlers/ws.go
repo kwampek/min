@@ -9,7 +9,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
-type WSAddMessage struct {
+type WSAddMessagePayload struct {
 	ChatID       int    `json:"chat_id"`
 	ChatMemberId int    `json:"from_chat_member_id"`
 	Text         string `json:"text"`
@@ -30,30 +30,25 @@ type WSCreatePayload struct {
 }
 
 type WSCreateFolderPayload struct {
-	UserId int    `json:"user_id"`
-	Name   string `json:"folder_name"`
+	Name string `json:"folder_name"`
 }
 
 type WSEditFolderNamePayload struct {
-	UserId   int    `json:"user_id"`
 	PrevName string `json:"prev_name"`
 	NewName  string `json:"new_name"`
 }
 
 type WSAddChatToFolderPayload struct {
-	UserId     int    `json:"user_id"`
 	ChatId     int    `json:"chat_id"`
 	Foldername string `json:"folder_name"`
 }
 
 type WSRemoveChatFromFolderPayload struct {
-	UserId     int    `json:"user_id"`
 	ChatId     int    `json:"chat_id"`
 	Foldername string `json:"folder_name"`
 }
 
 type WSToggleChatInFolderPayload struct {
-	UserId     int    `json:"user_id"`
 	ChatId     int    `json:"chat_id"`
 	Foldername string `json:"folder_name"`
 	IsChecked  bool   `json:"is_checked"`
@@ -65,7 +60,6 @@ type WSEditChatNamePayload struct {
 }
 
 type WSEditProfilePayload struct {
-	UserId      int    `json:"user_id"`
 	Login       string `json:"login"`
 	Email       string `json:"email"`
 	PhoneNumber string `json:"phone_number"`
@@ -174,7 +168,7 @@ func (A *API) wsHandler(w http.ResponseWriter, r *http.Request) {
 			switch wrapper.Type {
 
 			case "new_message":
-				var msg WSAddMessage
+				var msg WSAddMessagePayload
 				if err := json.Unmarshal(wrapper.Payload, &msg); err != nil {
 					log.Println("new_message parse error:", err)
 					continue
@@ -209,7 +203,7 @@ func (A *API) wsHandler(w http.ResponseWriter, r *http.Request) {
 					continue
 				}
 
-				A.createFolderHandler(createFolderPayload.UserId, createFolderPayload.Name)
+				A.createFolderHandler(userId, createFolderPayload.Name)
 
 			case "add_chat_to_folder":
 				var AddChatToFolderPayload WSAddChatToFolderPayload
@@ -219,7 +213,7 @@ func (A *API) wsHandler(w http.ResponseWriter, r *http.Request) {
 					continue
 				}
 
-				A.addChatToFolderHandler(AddChatToFolderPayload.UserId, AddChatToFolderPayload.ChatId, AddChatToFolderPayload.Foldername)
+				A.addChatToFolderHandler(userId, AddChatToFolderPayload.ChatId, AddChatToFolderPayload.Foldername)
 
 			case "remove_chat_from_folder":
 				var RemoveChatFromFolderPayload WSRemoveChatFromFolderPayload
@@ -229,7 +223,7 @@ func (A *API) wsHandler(w http.ResponseWriter, r *http.Request) {
 					continue
 				}
 
-				A.removeChatFromFolderHandler(RemoveChatFromFolderPayload.UserId, RemoveChatFromFolderPayload.ChatId, RemoveChatFromFolderPayload.Foldername)
+				A.removeChatFromFolderHandler(userId, RemoveChatFromFolderPayload.ChatId, RemoveChatFromFolderPayload.Foldername)
 
 			case "toggle_chat_in_folder":
 				var ToggleChatInFolderPayload WSToggleChatInFolderPayload
@@ -240,9 +234,9 @@ func (A *API) wsHandler(w http.ResponseWriter, r *http.Request) {
 				}
 
 				if ToggleChatInFolderPayload.IsChecked {
-					A.addChatToFolderHandler(ToggleChatInFolderPayload.UserId, ToggleChatInFolderPayload.ChatId, ToggleChatInFolderPayload.Foldername)
+					A.addChatToFolderHandler(userId, ToggleChatInFolderPayload.ChatId, ToggleChatInFolderPayload.Foldername)
 				} else {
-					A.removeChatFromFolderHandler(ToggleChatInFolderPayload.UserId, ToggleChatInFolderPayload.ChatId, ToggleChatInFolderPayload.Foldername)
+					A.removeChatFromFolderHandler(userId, ToggleChatInFolderPayload.ChatId, ToggleChatInFolderPayload.Foldername)
 				}
 
 			case "edit_chat_name":
@@ -264,7 +258,7 @@ func (A *API) wsHandler(w http.ResponseWriter, r *http.Request) {
 					continue
 				}
 
-				A.editFolderNameHandler(editFolderNamePayload.UserId, editFolderNamePayload.PrevName, editFolderNamePayload.NewName)
+				A.editFolderNameHandler(userId, editFolderNamePayload.PrevName, editFolderNamePayload.NewName)
 
 			case "edit_profile":
 

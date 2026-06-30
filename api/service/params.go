@@ -9,7 +9,7 @@ type RegisterParams struct {
 	SearchPrivacy bool
 }
 
-
-
-
-
+type LoginParams struct {
+	Login    string `json:"login"`
+	Password string `json:"password"`
+}
