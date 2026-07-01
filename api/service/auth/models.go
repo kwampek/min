@@ -1,0 +1,41 @@
+package auth
+
+import (
+	"errors"
+	"time"
+)
+
+type RegisterRequest struct {
+	Login    string `json:"login"`
+	Password string `json:"password"`
+	Email    string `json:"email"`
+}
+
+type LoginRequest struct {
+	Login    string `json:"login"`
+	Password string `json:"password"`
+}
+
+type AuthResponse struct {
+	UserID    int       `json:"user_id"`
+	Login     string    `json:"login"`
+	Email     string    `json:"email"`
+	Token     string    `json:"token"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+type TokenInfo struct {
+	Token     string    `json:"token"`
+	ExpiresAt time.Time `json:"expires_at"`
+}
+
+var (
+	ErrUserNotFound       = errors.New("user not found")
+	ErrInvalidCredentials = errors.New("invalid credentials")
+	ErrUserAlreadyExists  = errors.New("user already exists")
+	ErrWeakPassword       = errors.New("password is too weak")
+	ErrInvalidToken       = errors.New("invalid token")
+	ErrTokenExpired       = errors.New("token expired")
+	ErrLoginTooShort      = errors.New("login must be at least 3 characters")
+	ErrLoginTooLong       = errors.New("login must be at most 32 characters")
+)
