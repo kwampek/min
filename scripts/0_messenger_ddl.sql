@@ -9,8 +9,8 @@ CREATE TABLE IF NOT EXISTS Messenger.MediaFiles (
 
 CREATE TABLE IF NOT EXISTS Messenger.Users (
     user_id SERIAL PRIMARY KEY,
-    login VARCHAR(200) UNIQUE NOT NULL,
-    password_hash VARCHAR(200) NOT NULL,
+    login VARCHAR(32) UNIQUE NOT NULL,
+    password_hash VARCHAR(32) NOT NULL,
     phone_number VARCHAR(20),
     email VARCHAR(50),
     birthday TIMESTAMP,

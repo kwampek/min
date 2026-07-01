@@ -109,6 +109,7 @@ func (s *Service) Login(req LoginRequest) (*AuthResponse, error) {
 		Email:       user.Email,
 		PhoneNumber: user.PhoneNumber,
 		Token:       token,
+		CreatedAt:   user.CreatedAt,
 	}, nil
 }
 

@@ -28,8 +28,17 @@ func (s *Storage) CreateUser(user *models.User) (int, error) {
 		user.AvatarLink,
 	).Scan(&id)
 
-	if err != nil {
-		return 0, err
+	var pgErr *pgconn.PgError
+	if errors.As(err, &pgErr) {
+		switch pgErr.Code {
+		case "23505":
+			switch pgErr.ConstraintName {
+			case "idx_users_login_unique":
+				return ErrLoginExists
+			case "idx_users_email_unique":
+				return ErrEmailExists
+			}
+		}
 	}
 
 	return id, nil
