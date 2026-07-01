@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"api/service"
 	"database/sql"
 	"net/http"
 	"sync"
@@ -14,6 +15,7 @@ type WsClient struct {
 }
 
 type API struct {
+	Storage   service.Storage
 	DB        *sql.DB
 	JwtSecret string
 

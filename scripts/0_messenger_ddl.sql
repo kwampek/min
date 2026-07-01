@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS Messenger.MediaFiles (
 CREATE TABLE IF NOT EXISTS Messenger.Users (
     user_id SERIAL PRIMARY KEY,
     login VARCHAR(200) UNIQUE NOT NULL,
-    password VARCHAR(200) NOT NULL,
+    password_hash VARCHAR(200) NOT NULL,
     phone_number VARCHAR(20),
     email VARCHAR(50),
     birthday TIMESTAMP,
@@ -98,3 +98,7 @@ CREATE TABLE IF NOT EXISTS Messenger.Tokens (
     expires_at TIMESTAMP NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT now()
 );
+
+CREATE UNIQUE INDEX idx_users_login_unique ON Messenger.Users(LOWER(login));
+CREATE UNIQUE INDEX idx_users_email_unique ON Messenger.Users(LOWER(email)) WHERE email IS NOT NULL AND email != '';
+CREATE UNIQUE INDEX idx_users_phone_unique ON Messenger.Users(phone_number) WHERE phone_number IS NOT NULL AND phone_number != '';

@@ -6,9 +6,10 @@ import (
 )
 
 type RegisterRequest struct {
-	Login    string `json:"login"`
-	Password string `json:"password"`
-	Email    string `json:"email"`
+	Login       string `json:"login"`
+	Password    string `json:"password"`
+	Email       string `json:"email"`
+	PhoneNumber string `json:"phone_number"`
 }
 
 type LoginRequest struct {
@@ -17,11 +18,12 @@ type LoginRequest struct {
 }
 
 type AuthResponse struct {
-	UserID    int       `json:"user_id"`
-	Login     string    `json:"login"`
-	Email     string    `json:"email"`
-	Token     string    `json:"token"`
-	CreatedAt time.Time `json:"created_at"`
+	UserID      int       `json:"user_id"`
+	Login       string    `json:"login"`
+	Email       string    `json:"email"`
+	PhoneNumber string    `json:"phone_number"`
+	Token       string    `json:"token"`
+	CreatedAt   time.Time `json:"created_at"`
 }
 
 type TokenInfo struct {

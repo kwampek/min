@@ -159,6 +159,7 @@ func (A *API) wsHandler(w http.ResponseWriter, r *http.Request) {
 		for {
 			_, p, err := conn.ReadMessage()
 			if err != nil {
+				// TODO here must be reconnect
 				log.Println("WS read error:", err)
 				return
 			}
