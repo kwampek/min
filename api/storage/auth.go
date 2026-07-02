@@ -125,6 +125,20 @@ func (s *Storage) GetUserByID(id int) (*models.User, error) {
 	return &user, nil
 }
 
+func (s *Storage) IsTokenExists(token string) (bool, error) {
+	var exists bool
+	err := s.DB.QueryRow(
+		`SELECT EXISTS (
+            SELECT 1
+            FROM Messenger.Tokens
+            WHERE token = $1
+              AND expires_at > now()
+        )`, token,
+	).Scan(&exists)
+
+	return exists, err
+}
+
 func (s *Storage) SaveToken(userID int, token string, expiresAt time.Time) error {
 	_, err := s.DB.Exec(`
 		INSERT INTO Messenger.Tokens (user_id, token, expires_at)

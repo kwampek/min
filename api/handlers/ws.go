@@ -2,11 +2,8 @@ package handlers
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
-
-	"github.com/golang-jwt/jwt/v5"
 )
 
 type WSAddMessage struct {
@@ -80,47 +77,25 @@ func (A *API) wsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (any, error) {
-		if token.Method != jwt.SigningMethodHS256 {
-			return nil, fmt.Errorf("wrongsigning method")
-		}
-		return A.secret(), nil
-	})
-
-	if err != nil || !token.Valid {
-		http.Error(w, "invalid token", http.StatusUnauthorized)
+	claims, err := A.AuthService.Jwt.ValidateToken(tokenString)
+	if err != nil {
+		http.Error(w, "invalid token: "+err.Error(), http.StatusUnauthorized)
 		return
 	}
 
-	claims, ok := token.Claims.(jwt.MapClaims)
-	if !ok {
-		http.Error(w, "invalid token claims", http.StatusUnauthorized)
+	exists, err := A.AuthService.Storage.IsTokenExists(tokenString)
+	if err != nil {
+		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}
-
-	var exists bool
-	err = A.DB.QueryRow(
-		`SELECT EXISTS (
-			SELECT 1
-			  FROM Messenger.Tokens
-			 WHERE token = $1
-			   AND (expires_at IS NULL OR expires_at > now())
-		)`,
-		tokenString,
-	).Scan(&exists)
-
-	if err != nil || !exists {
+	if !exists {
 		http.Error(w, "token revoked", http.StatusUnauthorized)
 		return
 	}
 
-	userIDFloat, ok := claims["user_id"].(float64)
-	if !ok {
-		http.Error(w, "invalid user id in token", http.StatusUnauthorized)
-		return
-	}
+	userID := claims.UserID
 
-	userId := int(userIDFloat)
+	// TODO
 
 	conn, err := A.Upgrader.Upgrade(w, r, nil)
 	if err != nil {
@@ -129,10 +104,10 @@ func (A *API) wsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	A.WsClients.Lock()
-	A.WsClients.Conns[userId] = conn
+	A.WsClients.Conns[userID] = conn
 	A.WsClients.Unlock()
 
-	allMessages, err := A.loadAllMessages(userId)
+	allMessages, err := A.loadAllMessages(userID)
 	if err != nil {
 		log.Println("load messages error:", err)
 		conn.WriteJSON(map[string]interface{}{
@@ -150,10 +125,10 @@ func (A *API) wsHandler(w http.ResponseWriter, r *http.Request) {
 	go func() {
 		defer func() {
 			A.WsClients.Lock()
-			delete(A.WsClients.Conns, userId)
+			delete(A.WsClients.Conns, userID)
 			A.WsClients.Unlock()
 			conn.Close()
-			log.Println("WS disconnected:", userId)
+			log.Println("WS disconnected:", userID)
 		}()
 
 		for {
@@ -180,7 +155,7 @@ func (A *API) wsHandler(w http.ResponseWriter, r *http.Request) {
 					log.Println("new_message parse error:", err)
 					continue
 				}
-				A.addMessageHandler(userId, msg)
+				A.addMessageHandler(userID, msg)
 
 			case "search":
 				log.Println("Nu pozya")
@@ -190,7 +165,7 @@ func (A *API) wsHandler(w http.ResponseWriter, r *http.Request) {
 					log.Println("search payload parse error:", err)
 					continue
 				}
-				A.searchUsersHandler(userId, payload.Text)
+				A.searchUsersHandler(userID, payload.Text)
 
 			case "create_chat":
 				var createPayload WSCreatePayload
@@ -200,7 +175,7 @@ func (A *API) wsHandler(w http.ResponseWriter, r *http.Request) {
 					continue
 				}
 
-				A.createPrivateChatHandler(userId, createPayload.UserId)
+				A.createPrivateChatHandler(userID, createPayload.UserId)
 
 			case "create_folder":
 				var createFolderPayload WSCreateFolderPayload
