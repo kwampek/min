@@ -32,12 +32,12 @@ type TokenInfo struct {
 }
 
 var (
-	ErrUserNotFound       = errors.New("user not found")
-	ErrInvalidCredentials = errors.New("invalid credentials")
-	ErrUserAlreadyExists  = errors.New("user already exists")
-	ErrWeakPassword       = errors.New("password is too weak")
-	ErrInvalidToken       = errors.New("invalid token")
-	ErrTokenExpired       = errors.New("token expired")
-	ErrLoginTooShort      = errors.New("login must be at least 3 characters")
-	ErrLoginTooLong       = errors.New("login must be at most 32 characters")
+	ErrInvalidPassword   = errors.New("invalid password")
+	ErrUserNotFound      = errors.New("user not found")
+	ErrUserAlreadyExists = errors.New("user already exists")
+	ErrWeakPassword      = errors.New("password is too weak")
+	ErrInvalidToken      = errors.New("invalid token")
+	ErrTokenExpired      = errors.New("token expired")
+	ErrLoginTooShort     = errors.New("login must be at least 3 characters")
+	ErrLoginTooLong      = errors.New("login must be at most 32 characters")
 )

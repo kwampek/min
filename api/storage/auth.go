@@ -5,6 +5,13 @@ import (
 	"database/sql"
 	"errors"
 	"time"
+
+	"github.com/jackc/pgx/v5/pgconn"
+)
+
+var (
+	ErrLoginExists = errors.New("")
+	ErrEmailExists = errors.New("")
 )
 
 func (s *Storage) CreateUser(user *models.User) (int, error) {
@@ -34,9 +41,9 @@ func (s *Storage) CreateUser(user *models.User) (int, error) {
 		case "23505":
 			switch pgErr.ConstraintName {
 			case "idx_users_login_unique":
-				return ErrLoginExists
+				return -1, ErrLoginExists
 			case "idx_users_email_unique":
-				return ErrEmailExists
+				return -1, ErrEmailExists
 			}
 		}
 	}

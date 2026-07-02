@@ -10,31 +10,31 @@ import (
 )
 
 type Service struct {
-	storage   Storage
-	jwt       *jwt.Service
-	validator *Validator
+	Storage   Storage
+	Jwt       *jwt.Service
+	Validator *Validator
 }
 
-func NewService(storage Storage, jwtService *jwt.Service) *Service {
-	return &Service{
-		storage:   storage,
-		jwt:       jwtService,
-		validator: NewValidator(),
+func NewService(Storage Storage, JwtService *jwt.Service) Service {
+	return Service{
+		Storage:   Storage,
+		Jwt:       JwtService,
+		Validator: NewValidator(),
 	}
 }
 
 func (s *Service) Register(req RegisterRequest) (*AuthResponse, error) {
-	if err := s.validator.ValidateLogin(req.Login); err != nil {
+	if err := s.Validator.ValidateLogin(req.Login); err != nil {
 		return nil, err
 	}
-	if err := s.validator.ValidatePassword(req.Password); err != nil {
+	if err := s.Validator.ValidatePassword(req.Password); err != nil {
 		return nil, err
 	}
-	if err := s.validator.ValidateEmail(req.Email); err != nil {
+	if err := s.Validator.ValidateEmail(req.Email); err != nil {
 		return nil, err
 	}
 
-	existing, _ := s.storage.GetUserByLogin(req.Login)
+	existing, _ := s.Storage.GetUserByLogin(req.Login)
 	if existing != nil {
 		return nil, ErrUserAlreadyExists
 	}
@@ -51,18 +51,18 @@ func (s *Service) Register(req RegisterRequest) (*AuthResponse, error) {
 		CreatedAt:    time.Now(),
 	}
 
-	userID, err := s.storage.CreateUser(user)
+	userID, err := s.Storage.CreateUser(user)
 	if err != nil {
 		return nil, err
 	}
 
-	token, err := s.jwt.GenerateToken(userID, req.Login)
+	token, err := s.Jwt.GenerateToken(userID, req.Login)
 	if err != nil {
 		return nil, err
 	}
 
 	expiresAt := time.Now().Add(24 * time.Hour)
-	if err := s.storage.SaveToken(userID, token, expiresAt); err != nil {
+	if err := s.Storage.SaveToken(userID, token, expiresAt); err != nil {
 		return nil, err
 	}
 
@@ -77,29 +77,29 @@ func (s *Service) Register(req RegisterRequest) (*AuthResponse, error) {
 }
 
 func (s *Service) Login(req LoginRequest) (*AuthResponse, error) {
-	if err := s.validator.ValidateLogin(req.Login); err != nil {
+	if err := s.Validator.ValidateLogin(req.Login); err != nil {
 		return nil, err
 	}
 	if len(req.Password) < 1 {
 		return nil, errors.New("password is required")
 	}
 
-	user, err := s.storage.GetUserByLogin(req.Login)
+	user, err := s.Storage.GetUserByLogin(req.Login)
 	if err != nil {
-		return nil, ErrInvalidCredentials
+		return nil, ErrUserNotFound
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.Password)); err != nil {
-		return nil, ErrInvalidCredentials
+		return nil, ErrInvalidPassword
 	}
 
-	token, err := s.jwt.GenerateToken(user.UserID, user.Login)
+	token, err := s.Jwt.GenerateToken(user.UserID, user.Login)
 	if err != nil {
 		return nil, err
 	}
 
 	expiresAt := time.Now().Add(24 * time.Hour)
-	if err := s.storage.SaveToken(user.UserID, token, expiresAt); err != nil {
+	if err := s.Storage.SaveToken(user.UserID, token, expiresAt); err != nil {
 		return nil, err
 	}
 
@@ -114,5 +114,5 @@ func (s *Service) Login(req LoginRequest) (*AuthResponse, error) {
 }
 
 func (s *Service) Logout(userID int, token string) error {
-	return s.storage.DeleteToken(userID, token)
+	return s.Storage.DeleteToken(userID, token)
 }

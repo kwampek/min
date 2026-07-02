@@ -1,13 +1,11 @@
 package handlers
 
 import (
-	"database/sql"
+	"api/service/auth"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"time"
-
-	"github.com/golang-jwt/jwt/v5"
-	"golang.org/x/crypto/bcrypt"
 )
 
 type RegisterResponse struct {
@@ -15,25 +13,6 @@ type RegisterResponse struct {
 	Login     string    `json:"login"`
 	CreatedAt time.Time `json:"created_at"`
 	Token     string    `json:"token"`
-}
-
-func hashPassword(password string) string {
-	hash, _ := bcrypt.GenerateFromPassword([]byte(password), 12)
-	return string(hash)
-}
-
-func checkPassword(hash, password string) bool {
-	return bcrypt.CompareHashAndPassword([]byte(hash), []byte(password)) == nil
-}
-
-func (A *API) createToken(user_id int, login string) (string, error) {
-	claims := jwt.MapClaims{
-		"user_id": user_id,
-		"login":   login,
-	}
-
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString(A.secret())
 }
 
 func EnableCors(next http.Handler) http.Handler {
@@ -53,10 +32,7 @@ func EnableCors(next http.Handler) http.Handler {
 }
 
 func (api *API) RegisterHandler(w http.ResponseWriter, r *http.Request) {
-	var req struct {
-		Login    string `json:"login"`
-		Password string `json:"password"`
-	}
+	var req auth.RegisterRequest
 
 	err := json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
@@ -64,77 +40,63 @@ func (api *API) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	hash := hashPassword(req.Password)
-	user_id, err := api.registerUser(req.Login, string(hash))
-
+	resp, err := api.AuthService.Register(req)
 	if err != nil {
-		http.Error(w, "user exists", http.StatusConflict)
+
+		//http.Error(w, err.Error(), http.StatusUnauthorized)
+
+		switch {
+		case errors.Is(err, auth.ErrWeakPassword):
+			http.Error(w, err.Error(), http.StatusUnauthorized)
+		case errors.Is(err, auth.ErrLoginTooShort):
+			http.Error(w, err.Error(), http.StatusUnauthorized)
+		case errors.Is(err, auth.ErrLoginTooLong):
+			http.Error(w, err.Error(), http.StatusUnauthorized)
+		case errors.Is(err, auth.ErrUserAlreadyExists):
+			http.Error(w, err.Error(), http.StatusUnauthorized)
+		// TODO add email and phone number check
+		default:
+			http.Error(w, "internal server error", http.StatusInternalServerError)
+		}
 		return
 	}
 
-	token, err := api.createToken(user_id, req.Login)
-	if err != nil {
-		http.Error(w, "internal error", http.StatusInternalServerError)
-	}
-
-	if err := api.updateTokenBd(user_id, token); err != nil {
-		http.Error(w, "internal error", http.StatusInternalServerError)
-	}
-
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(RegisterResponse{
-		UserID:    user_id,
-		Login:     req.Login,
-		CreatedAt: time.Now(), // TODO
-		Token:     token,
-	})
+	w.WriteHeader(http.StatusOK)
+	if err := json.NewEncoder(w).Encode(resp); err != nil {
+		http.Error(w, "failed to encode response", http.StatusInternalServerError)
+	}
 }
 
 func (api *API) LoginHandler(w http.ResponseWriter, r *http.Request) {
-	var req struct {
-		Login    string `json:"login"`
-		Password string `json:"password"`
-	}
-	json.NewDecoder(r.Body).Decode(&req)
+	var req auth.LoginRequest
 
-	var storedHash string
-	var userId int
-
-	err := api.DB.QueryRow(`
-		SELECT user_id, password FROM messenger.users WHERE login=$1
-	`, req.Login).Scan(&userId, &storedHash)
-
-	if err == sql.ErrNoRows {
-		http.Error(w, "invalid credentials", http.StatusUnauthorized)
-		return
-	}
-
+	err := json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
-		http.Error(w, "server error", http.StatusInternalServerError)
+		http.Error(w, "bad request", http.StatusBadRequest)
 		return
 	}
 
-	if !checkPassword(storedHash, req.Password) {
-		http.Error(w, "invalid credentials", http.StatusUnauthorized)
-		return
-	}
-
-	token, err := api.createToken(userId, req.Login)
+	resp, err := api.AuthService.Login(req)
 	if err != nil {
-		http.Error(w, "internal error", http.StatusInternalServerError)
-	}
+		//http.Error(w, err.Error(), http.StatusUnauthorized)
 
-	if err := api.updateTokenBd(userId, token); err != nil {
-		http.Error(w, "internal bd error", http.StatusInternalServerError)
+		switch {
+		case errors.Is(err, auth.ErrUserNotFound):
+			http.Error(w, err.Error(), http.StatusUnauthorized)
+		case errors.Is(err, auth.ErrInvalidPassword):
+			http.Error(w, "invalid credentials", http.StatusUnauthorized)
+		default:
+			http.Error(w, "internal server error", http.StatusInternalServerError)
+		}
+		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(RegisterResponse{
-		UserID:    userId,
-		Login:     req.Login,
-		CreatedAt: time.Now(),
-		Token:     token,
-	})
+	w.WriteHeader(http.StatusOK)
+	if err := json.NewEncoder(w).Encode(resp); err != nil {
+		http.Error(w, "failed to encode response", http.StatusInternalServerError)
+	}
 }
 
 func (api *API) updateTokenBd(userID int, token string) error {

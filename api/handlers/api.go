@@ -1,7 +1,9 @@
 package handlers
 
 import (
-	"api/service"
+	"api/service/auth"
+	"api/service/jwt"
+	"api/storage"
 	"database/sql"
 	"net/http"
 	"sync"
@@ -15,22 +17,25 @@ type WsClient struct {
 }
 
 type API struct {
-	Storage   service.Storage
-	DB        *sql.DB
-	JwtSecret string
+	DB *sql.DB
+
+	AuthService auth.Service
 
 	WsClients WsClient
 	Upgrader  websocket.Upgrader
 }
 
-func (A *API) secret() []byte {
-	return []byte(A.JwtSecret)
-}
-
 func New(db *sql.DB) *API {
+	secret := "secret-secret"
+	issuer := "auth.min.com"
+	expiryAt := 7
+
+	JwtService := jwt.NewService(secret, issuer, expiryAt)
+	Storage := storage.NewStorage(db)
+
 	return &API{
-		DB:        db,
-		JwtSecret: "secret-secret",
+		DB:          db, // maybe obsolete
+		AuthService: auth.NewService(Storage, JwtService),
 
 		WsClients: WsClient{
 			Conns: make(map[int]*websocket.Conn),
