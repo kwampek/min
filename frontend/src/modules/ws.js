@@ -5,7 +5,7 @@ import { setChats, addMessage, normalizeChats, setSearchResults, addNewChat } fr
 let socket = null;
 
 //const WS_URL = "ws://158.160.185.12/ws";
-const WS_URL = "ws://localhost:8080/ws";
+const WS_URL = "ws://localhost:8081/ws";
 
 
 function connectWS() {

@@ -169,7 +169,7 @@ func (A *API) LoadAllMessagesHandler(w http.ResponseWriter, r *http.Request) {
 	A.loadAllMessagesHandler(w, r)
 }
 
-func (A *API) addMessageHandler(userId int, msg WSAddMessage) error {
+func (A *API) addMessageHandler(userId int, msg WSAddMessagePayload) error {
 	var mediaId sql.NullInt64
 
 	if msg.Media != "" {
