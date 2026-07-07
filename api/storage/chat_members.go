@@ -1,6 +1,6 @@
 package storage
 
-func (s *Storage) getChatMembersIds(chatID int) ([]int, error) {
+func (s *Storage) GetChatMembersIds(chatID int) ([]int, error) {
 	rows, err := s.DB.Query(`
 		SELECT user_id
 		FROM Messenger.ChatMembers
@@ -25,7 +25,7 @@ func (s *Storage) getChatMembersIds(chatID int) ([]int, error) {
 	return userIDs, rows.Err()
 }
 
-func (s *Storage) addChatMembers(chatID int, userIDs []int) ([]int, error) {
+func (s *Storage) AddChatMembers(chatID int, userIDs []int) ([]int, error) {
 	fromIDs := make([]int, 0, len(userIDs))
 
 	for _, uid := range userIDs {

@@ -98,10 +98,12 @@ func (A *API) wsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	A.WsClients.Lock()
-	A.WsClients.Conns[userID] = conn
+	A.WsClients.clients[userID] = conn
 	A.WsClients.Unlock()
 
-	allMessages, err := A.loadAllMessages(userID)
+	// pum pum pum how to fix this
+
+	allMessages, err := A.MessageService.LoadAllMessages(userID)
 	if err != nil {
 		log.Println("load messages error:", err)
 		conn.WriteJSON(map[string]interface{}{
@@ -179,7 +181,7 @@ func (A *API) wsHandler(w http.ResponseWriter, r *http.Request) {
 					continue
 				}
 
-				A.createFolderHandler(userId, createFolderPayload.Name)
+				A.createFolderHandler(createFolderPayload.Name)
 
 			case "add_chat_to_folder":
 				var AddChatToFolderPayload WSAddChatToFolderPayload
@@ -189,7 +191,7 @@ func (A *API) wsHandler(w http.ResponseWriter, r *http.Request) {
 					continue
 				}
 
-				A.addChatToFolderHandler(userId, AddChatToFolderPayload.ChatId, AddChatToFolderPayload.Foldername)
+				A.addChatToFolderHandler(AddChatToFolderPayload.ChatId, AddChatToFolderPayload.Foldername)
 
 			case "remove_chat_from_folder":
 				var RemoveChatFromFolderPayload WSRemoveChatFromFolderPayload
@@ -199,7 +201,7 @@ func (A *API) wsHandler(w http.ResponseWriter, r *http.Request) {
 					continue
 				}
 
-				A.removeChatFromFolderHandler(userId, RemoveChatFromFolderPayload.ChatId, RemoveChatFromFolderPayload.Foldername)
+				A.removeChatFromFolderHandler(RemoveChatFromFolderPayload.ChatId, RemoveChatFromFolderPayload.Foldername)
 
 			case "toggle_chat_in_folder":
 				var ToggleChatInFolderPayload WSToggleChatInFolderPayload
@@ -210,9 +212,9 @@ func (A *API) wsHandler(w http.ResponseWriter, r *http.Request) {
 				}
 
 				if ToggleChatInFolderPayload.IsChecked {
-					A.addChatToFolderHandler(userId, ToggleChatInFolderPayload.ChatId, ToggleChatInFolderPayload.Foldername)
+					A.addChatToFolderHandler(ToggleChatInFolderPayload.ChatId, ToggleChatInFolderPayload.Foldername)
 				} else {
-					A.removeChatFromFolderHandler(userId, ToggleChatInFolderPayload.ChatId, ToggleChatInFolderPayload.Foldername)
+					A.removeChatFromFolderHandler(ToggleChatInFolderPayload.ChatId, ToggleChatInFolderPayload.Foldername)
 				}
 
 			case "edit_chat_name":
@@ -234,7 +236,7 @@ func (A *API) wsHandler(w http.ResponseWriter, r *http.Request) {
 					continue
 				}
 
-				A.editFolderNameHandler(userId, editFolderNamePayload.PrevName, editFolderNamePayload.NewName)
+				A.editFolderNameHandler(editFolderNamePayload.PrevName, editFolderNamePayload.NewName)
 
 			case "edit_profile":
 
