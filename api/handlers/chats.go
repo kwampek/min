@@ -63,13 +63,16 @@ func (A *API) createPrivateChatHandler(userID1, userID2 int) error {
 
 	busers := []int{userID1, userID2}
 
-	fcm, err := A.addChatMembers(chatID, busers)
+	fcm, err := A.ChatService.AddChatMembers(chatID, busers) // TODO check
+
 	if err != nil {
 		log.Println("AddChatMembers err", err)
 		return err
 	}
 
 	var chat = SChat{ChatID: chatID, Title: chatTitle, CreatorID: userID1, Type: 1}
+
+	// TODO
 
 	for i, uid := range busers {
 		conn, ok := A.WsClients.Conns[uid]
