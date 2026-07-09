@@ -1,61 +1,94 @@
 package handlers
 
 import (
-	"fmt"
+	"encoding/json"
+	"log"
 )
 
-func (A *API) createFolderHandler(user_id int, name string) (int, error) {
-	var folder_id int
-	err := A.DB.QueryRow(`
-        INSERT INTO Messenger.Folders (user_id, folder_name)
-        VALUES ($1, $2)
-        RETURNING folder_id
-    `, user_id, name).Scan(&folder_id)
-	if err != nil {
-		return 0, err
-	}
-	return folder_id, nil
+type WSCreateFolderPayload struct {
+	Name string `json:"folder_name"`
 }
 
-func (A *API) editFolderNameHandler(user_id int, prev_name, name string) error {
-	res, err := A.DB.Exec(`
-        UPDATE Messenger.Folders
-        SET folder_name = $1
-        WHERE user_id = $2 and folder_name = $3
-    `, name, user_id, prev_name)
-	if err != nil {
+func (A *API) CreateFolderHandler(userID int, payload json.RawMessage) error {
+	var createFolderPayload WSCreateFolderPayload
+
+	if err := json.Unmarshal(payload, &createFolderPayload); err != nil {
+		log.Println("create folder parse error: ", err)
 		return err
 	}
 
-	rowsAffected, _ := res.RowsAffected()
-	if rowsAffected == 0 {
-		return fmt.Errorf("folder with name %s not found", prev_name)
+	_, err := A.FolderService.CreateFolder(userID, createFolderPayload.Name)
+	// TODO - check necessity of folderID return
+	return err
+}
+
+type WSEditFolderNamePayload struct {
+	PrevName string `json:"prev_name"`
+	NewName  string `json:"new_name"`
+}
+
+func (A *API) EditFolderNameHandler(userID int, payload json.RawMessage) error {
+	var editFolderNamePayload WSEditFolderNamePayload
+
+	if err := json.Unmarshal(payload, &editFolderNamePayload); err != nil {
+		log.Println("create folder parse error: ", err)
+		return err
 	}
 
-	return nil
+	return A.FolderService.EditFolderName(userID, editFolderNamePayload.PrevName, editFolderNamePayload.NewName)
+
 }
 
-func (A *API) addChatToFolderHandler(user_id, chat_id int, folder_name string) error {
-	_, err := A.DB.Exec(`
-		INSERT INTO Messenger.FolderChats (folder_id, chat_id)
-		SELECT folder_id, $1
-		FROM Messenger.Folders
-		WHERE user_id = $2 AND folder_name = $3
-	`, chat_id, user_id, folder_name)
-
-	return err
+type WSAddChatToFolderPayload struct {
+	ChatId     int    `json:"chat_id"`
+	Foldername string `json:"folder_name"`
 }
 
-func (A *API) removeChatFromFolderHandler(user_id, chat_id int, folder_name string) error {
-	_, err := A.DB.Exec(`
-		DELETE FROM Messenger.FolderChats
-		WHERE chat_id = $1
-		AND folder_id IN (
-			SELECT folder_id
-			FROM Messenger.Folders
-			WHERE user_id = $2 AND folder_name = $3
-		)
-	`, chat_id, user_id, folder_name)
+func (A *API) AddChatToFolderHandler(userID int, payload json.RawMessage) error {
+	var AddChatToFolderPayload WSAddChatToFolderPayload
 
-	return err
+	if err := json.Unmarshal(payload, &AddChatToFolderPayload); err != nil {
+		log.Println("create folder parse error: ", err)
+		return err
+	}
+
+	return A.FolderService.AddChatToFolder(userID, AddChatToFolderPayload.ChatId, AddChatToFolderPayload.Foldername)
+}
+
+type WSRemoveChatFromFolderPayload struct {
+	ChatId     int    `json:"chat_id"`
+	Foldername string `json:"folder_name"`
+}
+
+func (A *API) RemoveChatFromFolderHandler(userID int, payload json.RawMessage) error {
+	var RemoveChatFromFolderPayload WSRemoveChatFromFolderPayload
+
+	if err := json.Unmarshal(payload, &RemoveChatFromFolderPayload); err != nil {
+		log.Println("remove chat from folder parse error: ", err)
+		return err
+	}
+
+	return A.FolderService.RemoveChatFromFolder(userID, RemoveChatFromFolderPayload.ChatId, RemoveChatFromFolderPayload.Foldername)
+}
+
+type WSToggleChatInFolderPayload struct {
+	ChatId     int    `json:"chat_id"`
+	Foldername string `json:"folder_name"`
+	IsChecked  bool   `json:"is_checked"`
+}
+
+func (A *API) ToggleChatInFolderHandler(userID int, payload json.RawMessage) error {
+	var ToggleChatInFolderPayload WSToggleChatInFolderPayload
+
+	if err := json.Unmarshal(payload, &ToggleChatInFolderPayload); err != nil {
+		log.Println("toggle chat in folder parse error: ", err)
+		return err
+	}
+
+	if ToggleChatInFolderPayload.IsChecked {
+		return A.FolderService.AddChatToFolder(userID, ToggleChatInFolderPayload.ChatId, ToggleChatInFolderPayload.Foldername)
+	}
+
+	return A.FolderService.RemoveChatFromFolder(userID, ToggleChatInFolderPayload.ChatId, ToggleChatInFolderPayload.Foldername)
+
 }

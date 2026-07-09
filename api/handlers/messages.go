@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"strconv"
 )
@@ -31,7 +32,14 @@ func (A *API) LoadAllMessagesHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(resp)
 }
 
-func (A *API) AddMessageHandler(userID int, reqPayload WSAddMessagePayload) error {
+type WSAddMessagePayload struct {
+	ChatID       int    `json:"chat_id"`
+	ChatMemberId int    `json:"from_chat_member_id"`
+	Text         string `json:"text"`
+	Media        string `json:"media"`
+}
+
+func (A *API) addMessageHandler(userID int, reqPayload WSAddMessagePayload) error {
 	var mediaID sql.NullInt64
 
 	if reqPayload.Media != "" {
@@ -68,7 +76,16 @@ func (A *API) AddMessageHandler(userID int, reqPayload WSAddMessagePayload) erro
 		return err
 	}
 
-	return A.WsClients.BroadcastToUsers(users, userID, payload)
+	return A.WsService.BroadcastToUsers(users, userID, payload)
+}
+
+func (A *API) AddMessageHandler(userID int, payload json.RawMessage) error {
+	var msg WSAddMessagePayload
+	if err := json.Unmarshal(payload, &msg); err != nil {
+		log.Println("new_message parse error:", err)
+		return err
+	}
+	return A.addMessageHandler(userID, msg)
 }
 
 // func (A *API) broadcastToChat(senderId, chatId int, message Message) error {

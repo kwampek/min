@@ -3,15 +3,14 @@ package handlers
 import (
 	"api/service/auth"
 	"api/service/chats"
+	"api/service/folders"
 	"api/service/jwt"
 	"api/service/media"
 	"api/service/messages"
-	"api/service/wsclient"
+	"api/service/users"
+	"api/service/ws"
 	"api/storage"
 	"database/sql"
-	"net/http"
-
-	"github.com/gorilla/websocket"
 )
 
 type API struct {
@@ -21,31 +20,39 @@ type API struct {
 	MessageService messages.MessageService
 	MediaService   media.MediaService
 	ChatService    chats.ChatService
+	FolderService  folders.FolderService
+	UserService    users.UserService
 
-	WsClients wsclient.WsClient
-	Upgrader  websocket.Upgrader
+	WsService ws.WsService
+	WsRouter  WsRouter
 }
 
 func New(db *sql.DB) *API {
-	secret := "secret-secret"
-	issuer := "auth.min.com"
-	expiryAt := 7
 
-	JwtService := jwt.NewService(secret, issuer, expiryAt)
-	Storage := storage.NewStorage(db)
+	storage := storage.NewStorage(db)
 
-	return &API{
-		DB:             db, // maybe obsolete
-		AuthService:    auth.NewService(Storage, JwtService),
-		MessageService: messages.NewMessagesService(Storage),
-		MediaService:   media.NewMediaService(Storage),
-		ChatService:    chats.NewChatService(Storage),
+	api := &API{
+		DB: db,
 
-		WsClients: wsclient.NewWsClient(),
-		Upgrader: websocket.Upgrader{
-			CheckOrigin: func(r *http.Request) bool {
-				return true
-			},
-		},
+		AuthService: auth.NewService(
+			storage,
+			jwt.NewService(
+				"secret-secret",
+				"auth.min.com",
+				7,
+			),
+		),
+
+		WsService: ws.NewWsService(),
 	}
+
+	api.MessageService = messages.NewMessagesService(storage)
+	api.MediaService = media.NewMediaService(storage)
+	api.ChatService = chats.NewChatService(storage)
+	api.FolderService = folders.NewFolderService(storage)
+	api.UserService = users.NewUserService(storage)
+
+	api.WsRouter = NewWsRouter(api)
+
+	return api
 }
