@@ -77,10 +77,6 @@ func (s *Storage) GetUserByLogin(login string) (*models.User, error) {
 		&user.SearchPrivacy,
 	)
 
-	if errors.Is(err, sql.ErrNoRows) {
-		return nil, nil
-	}
-
 	if err != nil {
 		return nil, err
 	}

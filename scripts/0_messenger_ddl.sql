@@ -2,30 +2,30 @@ CREATE SCHEMA IF NOT EXISTS Messenger;
 
 CREATE TABLE IF NOT EXISTS Messenger.MediaFiles (
     media_id SERIAL PRIMARY KEY,
-    type INTEGER NOT NULL,
-    file_url VARCHAR(200),
-    created_at TIMESTAMP
+    type SMALLINT NOT NULL,
+    file_url TEXT NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT now()
 );
 
 CREATE TABLE IF NOT EXISTS Messenger.Users (
-    user_id SERIAL PRIMARY KEY,
-    login VARCHAR(32) UNIQUE NOT NULL,
-    password_hash VARCHAR(32) NOT NULL,
+    user_id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    login VARCHAR(32) NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,
     phone_number VARCHAR(20),
-    email VARCHAR(50),
-    birthday TIMESTAMP,
+    email VARCHAR(254),
+    birthday DATE,
     sex BOOLEAN,
-    avatar_link VARCHAR(200),
-    created_at TIMESTAMP NOT NULL,
-    search_privacy BOOLEAN DEFAULT true
+    avatar_link TEXT,
+    created_at TIMESTAMP NOT NULL DEFAULT now(),
+    search_privacy BOOLEAN NOT NULL DEFAULT TRUE
 );
 
 CREATE TABLE IF NOT EXISTS Messenger.Chats (
     chat_id SERIAL PRIMARY KEY,
-    type INTEGER NOT NULL,
-    title VARCHAR(200) NOT NULL,
-    description VARCHAR(200),
-    avatar_link VARCHAR(200),
+    type SMALLINT NOT NULL,
+    title VARCHAR(128) NOT NULL,
+    description TEXT,
+    avatar_link TEXT,
     creator_id INTEGER NOT NULL,
     created_at TIMESTAMP NOT NULL,
     search_privacy BOOLEAN DEFAULT true,
@@ -77,7 +77,7 @@ CREATE TABLE IF NOT EXISTS Messenger.CallMembers (
 CREATE TABLE IF NOT EXISTS Messenger.Folders (
     folder_id SERIAL PRIMARY KEY,
     user_id INTEGER NOT NULL,
-    folder_name VARCHAR(200),
+    folder_name VARCHAR(64),
 
     FOREIGN KEY (user_id) REFERENCES Messenger.Users(user_id)
 );

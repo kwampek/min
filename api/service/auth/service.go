@@ -4,6 +4,7 @@ import (
 	"api/models"
 	"api/service/jwt"
 	"errors"
+	"fmt"
 	"time"
 
 	"golang.org/x/crypto/bcrypt"
@@ -89,6 +90,8 @@ func (s *Service) Login(req LoginRequest) (*AuthResponse, error) {
 		return nil, ErrUserNotFound
 	}
 
+	fmt.Println("USER: ", user)
+	fmt.Println("REQ: ", req)
 	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.Password)); err != nil {
 		return nil, ErrInvalidPassword
 	}
