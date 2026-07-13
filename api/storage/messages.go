@@ -68,7 +68,7 @@ func (s *Storage) GetUserChats(userID int) ([]models.ChatsByFolder, error) {
 
 		if err := rows.Scan(
 			&chat.ChatID,
-			&chat.Name,
+			&chat.Title,
 			&chat.AvatarLink,
 			&chat.ChatMemberId,
 			&chat.LastMessage,

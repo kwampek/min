@@ -62,7 +62,7 @@ func (A *API) EditProfile(payload map[string]string) error {
 		return nil
 	}
 
-	query += fmt.Sprintf(" WHERE user_id=%d", user_id)
+	query += fmt.Sprintf(" WHERE user_id=%s", user_id)
 
 	_, err := A.DB.Exec(query, args)
 	return err

@@ -70,8 +70,8 @@ const MiddleSection = ({ updateChatClick }) => {
     return () => clearTimeout(timeout);
   }, [searchText, dispatch]);
 
-
-  const existingChats = chats_list.filter(chat => chat.name.toLowerCase().includes(searchText.toLowerCase()));
+  // ujas
+  const existingChats = chats_list.filter(chat => chat.title.toLowerCase().includes(searchText.toLowerCase()));
   const globalSearchResults = searchResults.filter(user => !user.have_chat);
 
   return (

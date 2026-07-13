@@ -16,7 +16,7 @@ type Message struct {
 
 type ChatsByFolder struct {
 	ChatID       int            `json:"chat_id"`
-	Name         string         `json:"name"`
+	Title        string         `json:"title"`
 	AvatarLink   sql.NullString `json:"avatar"`
 	ChatMemberId int            `json:"chat_member_id"`
 	LastMessage  sql.NullString `json:"lastMessage"`

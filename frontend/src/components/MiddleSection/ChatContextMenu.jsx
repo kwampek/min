@@ -34,7 +34,7 @@ const ChatContextMenu = ({ x, y, chat, userId, onClose }) => {
   }, [folders, chat.chat_id]);
 
   const handleRename = () => {
-    const newName = prompt("Новое имя чата:", chat.name);
+    const newName = prompt("Новое имя чата:", chat.title);
     if (!newName) return;
 
     dispatch(editChatName({ chat_id: chat.chat_id, new_name: newName }));

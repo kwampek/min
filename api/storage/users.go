@@ -14,15 +14,16 @@ var fields = []string{
 	"sex",
 }
 
-func (s *Storage) SearchUsers(userId int, query string) ([]models.User, error) {
+func (s *Storage) SearchUsers(userId int, query string) ([]models.UserWAdditionlInfo, error) {
 	searchPattern := "%" + query + "%"
 
 	rows, err := s.DB.Query(`
 		SELECT 
 			u.user_id, 
 			u.login, 
-			u.password_hash, 
+			u.password_hash,
 			u.phone_number, 
+			u.email, 
 			u.avatar_link, 
 			u.created_at, 
 			u.search_privacy,
@@ -45,18 +46,19 @@ func (s *Storage) SearchUsers(userId int, query string) ([]models.User, error) {
 	}
 	defer rows.Close()
 
-	var users []models.User
+	var users []models.UserWAdditionlInfo
 	for rows.Next() {
-		var u models.User
+		var u models.UserWAdditionlInfo
 		err := rows.Scan(
 			&u.UserID,
 			&u.Login,
 			&u.PasswordHash,
 			&u.PhoneNumber,
+			&u.Email,
 			&u.AvatarLink,
 			&u.CreatedAt,
 			&u.SearchPrivacy,
-			//&u.HaveChat,
+			&u.HaveChat,
 		)
 		if err != nil {
 			return nil, err

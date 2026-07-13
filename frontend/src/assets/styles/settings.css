@@ -47,7 +47,7 @@ body {
 }
 
 .back-button:hover {
-    background-color: #1e90ff;
+    background-color: #4f9f76;
 }
 
 .settings-profile {
@@ -94,7 +94,7 @@ body {
 }
 
 .menu a:hover {
-    color: #1e90ff;
+    color: #4f9f76;
 }
 
 .content {
@@ -163,7 +163,7 @@ body {
 
 .profile-info-box button {
     padding: 10px;
-    background-color: #1e90ff;
+    background-color: #4f9f76;
     border: none;
     color: #fff;
     border-radius: 8px;
@@ -171,7 +171,7 @@ body {
 }
 
 .profile-info-box button:hover {
-    background-color: #0066cc;
+    background-color: #417f62;
 }
 
 /* ---------- GOSUSLUGI ---------- */
