@@ -25,7 +25,7 @@ CREATE TABLE IF NOT EXISTS Messenger.Chats (
     type SMALLINT NOT NULL,
     title VARCHAR(128) NOT NULL,
     description TEXT,
-    avatar_link TEXT,
+    avatar_id INTEGER DEFAULT NULL,
     creator_id INTEGER NOT NULL,
     created_at TIMESTAMP NOT NULL,
     search_privacy BOOLEAN DEFAULT true,

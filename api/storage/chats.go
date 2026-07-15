@@ -2,6 +2,7 @@ package storage
 
 import (
 	"api/models"
+	"database/sql"
 )
 
 func (s *Storage) UpdateChatTitle(chatID int, title string) error {
@@ -14,31 +15,38 @@ func (s *Storage) UpdateChatTitle(chatID int, title string) error {
 	return err
 }
 
-func (s *Storage) CreateChat(title string, creatorID int, typeID int) (*models.Chat, error) {
+func (s *Storage) CreateChat(typeID int, title, description string, avatarID sql.NullInt64, creatorID int) (*models.Chat, error) {
 	var chat models.Chat
 
 	err := s.DB.QueryRow(`
 		INSERT INTO Messenger.Chats (
 			type,
 			title,
+			description,
+			avatar_id,
 			created_at,
 			creator_id
 		)
 		VALUES (
 			$1,
-			$2
+			$2,
+			$3,
+			$4,
 			NOW(),
-			$3
+			$5
 		)
 		RETURNING
 			chat_id,
 			title,
+			description,
+			avatar_id,
 			type,
 			creator_id,
 			created_at
-	`, typeID, title, creatorID).Scan(
+	`, typeID, title, description, avatarID, creatorID).Scan(
 		&chat.ChatID,
 		&chat.Title,
+		&chat.Description,
 		&chat.Type,
 		&chat.CreatorID,
 		&chat.CreatedAt,

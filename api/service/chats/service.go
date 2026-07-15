@@ -1,11 +1,15 @@
 package chats
 
-import "api/models"
+import (
+	"api/models"
+	"database/sql"
+)
 
 type Storage interface {
 	GetChatMembersIds(chatID int) ([]int, error)
 	AddChatMembers(chatID int, userIDs []int) ([]int, error)
 
+	CreateChat(typeID int, title, description string, avatarID sql.NullInt64, creatorID int) (*models.Chat, error)
 	CreatePrivateChat(userID1, userID2 int) (*models.Chat, error)
 	UpdateChatTitle(chatID int, title string) error
 }
@@ -49,4 +53,26 @@ func (cs *ChatService) CreatePrivateChat(userID1, userID2 int) (*models.Chat, []
 	}
 
 	return chat, members, nil
+}
+
+func (cs *ChatService) CreateChat(typeID int, title, description string, mediaID sql.NullInt64, members []int, creatorID int) (*models.Chat, error) {
+	chat, err := cs.Storage.CreateChat(typeID, title, description, mediaID, creatorID)
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = cs.Storage.AddChatMembers(chat.ChatID, members)
+	if err != nil {
+		return nil, err
+	}
+
+	return chat, nil
+}
+
+func (cs *ChatService) CreateGroupChannel(title, description string, mediaID sql.NullInt64, members []int, creatorID int) (*models.Chat, error) {
+	return cs.CreateChat(models.GroupChanellType, title, description, mediaID, members, creatorID)
+}
+
+func (cs *ChatService) CreateGroupChat(title, description string, mediaID sql.NullInt64, members []int, creatorID int) (*models.Chat, error) {
+	return cs.CreateChat(models.GroupChatType, title, description, mediaID, members, creatorID)
 }
