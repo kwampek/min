@@ -4,9 +4,9 @@ import (
 	"api/service/auth"
 	"api/service/chats"
 	"api/service/folders"
-	"api/service/jwt"
 	"api/service/media"
 	"api/service/messages"
+	"api/service/tokens"
 	"api/service/users"
 	"api/service/ws"
 	"api/storage"
@@ -16,7 +16,7 @@ import (
 type API struct {
 	DB *sql.DB
 
-	AuthService    auth.Service
+	AuthService    auth.AuthService
 	MessageService messages.MessageService
 	MediaService   media.MediaService
 	ChatService    chats.ChatService
@@ -34,9 +34,9 @@ func New(db *sql.DB) *API {
 	api := &API{
 		DB: db,
 
-		AuthService: auth.NewService(
+		AuthService: auth.NewAuthService(
 			storage,
-			jwt.NewService(
+			tokens.NewTokenService(
 				"secret-secret",
 				"auth.min.com",
 				7,

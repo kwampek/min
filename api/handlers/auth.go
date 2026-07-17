@@ -1,9 +1,11 @@
 package handlers
 
 import (
+	"api/models"
 	"api/service/auth"
 	"encoding/json"
 	"errors"
+	"log"
 	"net/http"
 	"time"
 )
@@ -40,7 +42,9 @@ func (api *API) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	resp, err := api.AuthService.Register(req)
+	device := models.DeviceFromRaw(r.UserAgent(), r.RemoteAddr)
+
+	resp, err := api.AuthService.Register(req, device)
 	if err != nil {
 
 		//http.Error(w, err.Error(), http.StatusUnauthorized)
@@ -58,6 +62,7 @@ func (api *API) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		default:
 			http.Error(w, "internal server error", http.StatusInternalServerError)
 		}
+		log.Println("error", err)
 		return
 	}
 
@@ -77,7 +82,9 @@ func (api *API) LoginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	resp, err := api.AuthService.Login(req)
+	device := models.DeviceFromRaw(r.UserAgent(), r.RemoteAddr)
+
+	resp, err := api.AuthService.Login(req, device)
 	if err != nil {
 		//http.Error(w, err.Error(), http.StatusUnauthorized)
 
@@ -89,6 +96,7 @@ func (api *API) LoginHandler(w http.ResponseWriter, r *http.Request) {
 		default:
 			http.Error(w, "internal server error", http.StatusInternalServerError)
 		}
+		log.Println("error", err)
 		return
 	}
 
@@ -97,18 +105,4 @@ func (api *API) LoginHandler(w http.ResponseWriter, r *http.Request) {
 	if err := json.NewEncoder(w).Encode(resp); err != nil {
 		http.Error(w, "failed to encode response", http.StatusInternalServerError)
 	}
-}
-
-func (api *API) updateTokenBd(userID int, token string) error {
-	expiresAt := time.Now().Add(60 * time.Minute)
-
-	_, err := api.DB.Exec(
-		`INSERT INTO Messenger.Tokens (user_id, token, expires_at)
-		VALUES ($1, $2, $3)`,
-		userID,
-		token,
-		expiresAt,
-	)
-
-	return err
 }

@@ -1,8 +1,9 @@
 package handlers
 
 import (
+	"api/models"
 	"encoding/json"
-	"fmt"
+	"errors"
 	"log"
 	"net/http"
 
@@ -41,28 +42,13 @@ type WSMessageWrapper struct {
 	Payload json.RawMessage `json:"payload"`
 }
 
-func (A *API) authenticateWS(r *http.Request) (int, error) {
-	tokenString := r.URL.Query().Get("token")
-	if tokenString == "" {
-		return 0, fmt.Errorf("missing token")
+func (a *API) authenticateWS(r *http.Request) (*models.Session, error) {
+	token := r.URL.Query().Get("token")
+	if token == "" {
+		return nil, errors.New("missing token")
 	}
 
-	claims, err := A.AuthService.Jwt.ValidateToken(tokenString)
-	if err != nil {
-		return 0, err
-	}
-
-	exists, err := A.AuthService.Storage.IsTokenExists(tokenString)
-	if err != nil {
-		return 0, err
-	}
-
-	if !exists {
-		return 0, fmt.Errorf("token revoked")
-	}
-
-	// may be better to send full claims
-	return claims.UserID, nil
+	return a.AuthService.ValidateSession(token)
 }
 
 func (A *API) sendInitialState(userID int, conn *websocket.Conn) error {

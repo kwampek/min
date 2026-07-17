@@ -8,8 +8,8 @@ import (
 type Validator struct {
 }
 
-func NewValidator() *Validator {
-	return &Validator{}
+func NewValidator() Validator {
+	return Validator{}
 }
 
 func (v *Validator) ValidateLogin(login string) error {
@@ -31,4 +31,8 @@ func (v *Validator) ValidateEmail(email string) error {
 	}
 
 	return nil
+}
+
+func (s *AuthService) ValidateSession(token string) (int, error) {
+	return s.Storage.ValidateSession(token)
 }

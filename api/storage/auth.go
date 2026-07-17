@@ -2,9 +2,9 @@ package storage
 
 import (
 	"api/models"
-	"database/sql"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
-	"time"
 
 	"github.com/jackc/pgx/v5/pgconn"
 )
@@ -14,7 +14,7 @@ var (
 	ErrEmailExists = errors.New("")
 )
 
-func (s *Storage) CreateUser(user *models.User) (int, error) {
+func (s *Storage) CreateUser(user models.User) (int, error) {
 	var id int
 
 	err := s.DB.QueryRow(`
@@ -51,7 +51,7 @@ func (s *Storage) CreateUser(user *models.User) (int, error) {
 	return id, nil
 }
 
-func (s *Storage) GetUserByLogin(login string) (*models.User, error) {
+func (s *Storage) GetUserByLogin(login string) (models.User, error) {
 	var user models.User
 
 	err := s.DB.QueryRow(`
@@ -77,14 +77,10 @@ func (s *Storage) GetUserByLogin(login string) (*models.User, error) {
 		&user.SearchPrivacy,
 	)
 
-	if err != nil {
-		return nil, err
-	}
-
-	return &user, nil
+	return user, err
 }
 
-func (s *Storage) GetUserByID(id int) (*models.User, error) {
+func (s *Storage) GetUserByID(id int) (models.User, error) {
 	var user models.User
 
 	err := s.DB.QueryRow(`
@@ -110,46 +106,140 @@ func (s *Storage) GetUserByID(id int) (*models.User, error) {
 		&user.SearchPrivacy,
 	)
 
-	if errors.Is(err, sql.ErrNoRows) {
-		return nil, nil
+	return user, err
+}
+
+// func (s *Storage) IsTokenExists(token string) (bool, error) {
+// 	var exists bool
+// 	err := s.DB.QueryRow(
+// 		`SELECT EXISTS (
+//             SELECT 1
+//             FROM Messenger.Tokens
+//             WHERE token = $1
+//               AND expires_at > now()
+//         )`, token,
+// 	).Scan(&exists)
+
+// 	return exists, err
+// }
+
+// func (s *Storage) SaveToken(userID int, token string, expiresAt time.Time) error {
+// 	_, err := s.DB.Exec(`
+// 		INSERT INTO Messenger.Tokens (user_id, token, expires_at)
+// 		VALUES ($1, $2, $3)
+// 	`, userID, token, expiresAt)
+
+// 	return err
+// }
+
+// func (s *Storage) DeleteToken(userID int, token string) error {
+// 	_, err := s.DB.Exec(`
+// 		DELETE FROM Messenger.Tokens
+// 		WHERE user_id = $1
+// 		  AND token = $2
+// 	`, userID, token)
+
+// 	return err
+// }
+
+// func (s *Storage) ValidateSession(token string) (int, error) {
+// 	hash := sha256.Sum256([]byte(token))
+
+// 	var userID int
+
+// 	err := s.DB.QueryRow(`
+// 		SELECT user_id
+// 		FROM Messenger.Sessions
+// 		WHERE token_hash=$1
+// 		AND revoked=false
+// 		AND expires_at > now()
+// 	`,
+// 		hex.EncodeToString(hash[:]),
+// 	).Scan(&userID)
+
+// 	if err != nil {
+// 		return 0, err
+// 	}
+
+// 	return userID, nil
+// }
+
+func (s *Storage) ValidateSession(token string) (int, error) {
+	hash := sha256.Sum256([]byte(token))
+	tokenHash := hex.EncodeToString(hash[:])
+
+	tx, err := s.DB.Begin()
+	if err != nil {
+		return 0, err
 	}
+	defer tx.Rollback()
+
+	var userID int
+
+	err = tx.QueryRow(`
+		SELECT user_id
+		FROM Messenger.Sessions
+		WHERE token_hash = $1
+		  AND revoked = FALSE
+		  AND expires_at > NOW()
+	`, tokenHash).Scan(&userID)
 
 	if err != nil {
-		return nil, err
+		return 0, err
 	}
 
-	return &user, nil
+	_, err = tx.Exec(`
+		UPDATE Messenger.Sessions
+		SET last_activity = NOW()
+		WHERE token_hash = $1
+	`, tokenHash)
+
+	if err != nil {
+		return 0, err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return 0, err
+	}
+
+	return userID, nil
 }
 
-func (s *Storage) IsTokenExists(token string) (bool, error) {
-	var exists bool
-	err := s.DB.QueryRow(
-		`SELECT EXISTS (
-            SELECT 1
-            FROM Messenger.Tokens
-            WHERE token = $1
-              AND expires_at > now()
-        )`, token,
-	).Scan(&exists)
-
-	return exists, err
-}
-
-func (s *Storage) SaveToken(userID int, token string, expiresAt time.Time) error {
+func (s *Storage) CreateSession(session models.Session) error {
 	_, err := s.DB.Exec(`
-		INSERT INTO Messenger.Tokens (user_id, token, expires_at)
-		VALUES ($1, $2, $3)
-	`, userID, token, expiresAt)
+		INSERT INTO Messenger.Sessions
+		(
+			user_id,
+			token_hash,
+			device_name,
+			ip_address,
+			expires_at
+		)
+		VALUES
+		(
+			$1,
+			$2,
+			$3,
+			$4,
+			$5
+		)
+	`,
+		session.UserID,
+		session.TokenHash,
+		session.DeviceName,
+		session.IPAddress,
+		session.ExpiresAt,
+	)
 
 	return err
 }
 
-func (s *Storage) DeleteToken(userID int, token string) error {
+func (s *Storage) RevokeSession(tokenHash string) error {
 	_, err := s.DB.Exec(`
-		DELETE FROM Messenger.Tokens
-		WHERE user_id = $1
-		  AND token = $2
-	`, userID, token)
+		UPDATE Messenger.Sessions
+		SET revoked = TRUE
+		WHERE token_hash = $1
+	`, tokenHash)
 
 	return err
 }
