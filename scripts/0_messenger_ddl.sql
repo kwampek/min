@@ -23,7 +23,7 @@ CREATE TABLE IF NOT EXISTS Messenger.Users (
 CREATE TABLE IF NOT EXISTS Messenger.Chats (
     chat_id SERIAL PRIMARY KEY,
     type SMALLINT NOT NULL,
-    title VARCHAR(128) NOT NULL,
+    title VARCHAR(32) NOT NULL,
     description TEXT,
     avatar_id INTEGER DEFAULT NULL,
     creator_id INTEGER NOT NULL,
@@ -37,9 +37,10 @@ CREATE TABLE IF NOT EXISTS Messenger.ChatMembers (
     chat_member_id SERIAL PRIMARY KEY,
     chat_id INTEGER NOT NULL,
     user_id INTEGER NOT NULL,
+    custom_title VARCHAR(32) DEFAULT NULL,
     member_from TIMESTAMP NOT NULL,
-    role VARCHAR(200),
-    access_rights BOOLEAN DEFAULT true,
+    role VARCHAR(32),
+    access_rights BIGINT NOT NULL DEFAULT 0,
 
     FOREIGN KEY (chat_id) REFERENCES Messenger.Chats(chat_id),
     FOREIGN KEY (user_id) REFERENCES Messenger.Users(user_id)
@@ -77,7 +78,7 @@ CREATE TABLE IF NOT EXISTS Messenger.CallMembers (
 CREATE TABLE IF NOT EXISTS Messenger.Folders (
     folder_id SERIAL PRIMARY KEY,
     user_id INTEGER NOT NULL,
-    folder_name VARCHAR(64),
+    folder_name VARCHAR(32),
 
     FOREIGN KEY (user_id) REFERENCES Messenger.Users(user_id)
 );

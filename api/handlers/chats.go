@@ -10,12 +10,19 @@ type WSCreatePayload struct {
 	UserId int `json:"userId"`
 }
 
+type WSAvatarPayload struct {
+	Name string `json:"name"`
+	Type string `json:"type"`
+	Size int64  `json:"size"`
+	Data string `json:"data"`
+}
+
 type WSCreateChatGroupPayload struct {
-	Type        int
-	Title       string
-	Description string
-	AvatarID    sql.NullInt64
-	Users       []int `json:"users"`
+	Type        int             `json:"type"`
+	Title       string          `json:"title"`
+	Description string          `json:"desc"`
+	Avatar      WSAvatarPayload `json:"avatar"`
+	Users       []int           `json:"users"`
 }
 
 func (a *API) createPrivateChatHandler(userID1, userID2 int) error {
@@ -71,11 +78,13 @@ func (a *API) CreateChatHandler(userID int, payload json.RawMessage) error {
 		return err
 	}
 
+	// Add Avatar
+
 	return a.createChatHandler(
 		createCGPayload.Type,
 		createCGPayload.Title,
 		createCGPayload.Description,
-		createCGPayload.AvatarID,
+		sql.NullInt64{},
 		userID,
 		createCGPayload.Users,
 	)
@@ -86,13 +95,29 @@ type WSEditChatNamePayload struct {
 	NewName string `json:"new_name"`
 }
 
-func (a *API) EditChatNameHandler(userID int, payload json.RawMessage) error {
-	var editChatNamePayload WSEditChatNamePayload
+type WSChatNameChanged struct {
+	ChatID  int    `json:"chat_id"`
+	NewName string `json:"new_name"`
+}
 
-	if err := json.Unmarshal(payload, &editChatNamePayload); err != nil {
-		log.Println("create folder parse error: ", err)
+func (a *API) EditChatNameHandler(userID int, payload json.RawMessage) error {
+	var p WSEditChatNamePayload
+
+	if err := json.Unmarshal(payload, &p); err != nil {
 		return err
 	}
 
-	return a.ChatService.EditChatTitle(editChatNamePayload.ChatId, editChatNamePayload.NewName)
+	memberIDs, err := a.ChatService.EditChatTitle(userID, p.ChatId, p.NewName)
+	if err != nil {
+		return err
+	}
+
+	return a.WsService.BroadcastToUsers(
+		memberIDs,
+		-1,
+		WSChatNameChanged{
+			ChatID:  p.ChatId,
+			NewName: p.NewName,
+		},
+	)
 }

@@ -101,3 +101,36 @@ func (s *Storage) CreatePrivateChat(userID1, userID2 int) (*models.Chat, error) 
 
 	return &chat, nil
 }
+
+func (s *Storage) GetByID(chatID int) (*models.Chat, error) {
+	var chat models.Chat
+
+	err := s.DB.QueryRow(`
+		SELECT
+			chat_id,
+			type,
+			title,
+			description,
+			avatar_id,
+			creator_id,
+			created_at,
+			search_privacy
+		FROM Messenger.Chats
+		WHERE chat_id = $1
+	`, chatID).Scan(
+		&chat.ChatID,
+		&chat.Type,
+		&chat.Title,
+		&chat.Description,
+		&chat.AvatarID,
+		&chat.CreatorID,
+		&chat.CreatedAt,
+		&chat.SearchPrivacy,
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &chat, nil
+}

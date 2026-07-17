@@ -71,7 +71,7 @@ func (A *API) addMessageHandler(userID int, reqPayload WSAddMessagePayload) erro
 		"message": message,
 	}
 
-	users, err := A.ChatService.GetChatMembersIds(reqPayload.ChatID)
+	users, err := A.ChatService.GetChatMembersIDs(reqPayload.ChatID)
 	if err != nil {
 		return err
 	}

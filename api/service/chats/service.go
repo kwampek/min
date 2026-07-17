@@ -6,12 +6,17 @@ import (
 )
 
 type Storage interface {
-	GetChatMembersIds(chatID int) ([]int, error)
+	GetChatMembersIDs(chatID int) ([]int, error)
 	AddChatMembers(chatID int, userIDs []int) ([]int, error)
 
 	CreateChat(typeID int, title, description string, avatarID sql.NullInt64, creatorID int) (*models.Chat, error)
 	CreatePrivateChat(userID1, userID2 int) (*models.Chat, error)
+
 	UpdateChatTitle(chatID int, title string) error
+	GetAccessRights(userID, chatID int) (int64, error)
+	HasPermission(userID, chatID int, permission int64) (bool, error)
+	GetByID(chatID int) (*models.Chat, error)
+	UpdateMemberCustomTitle(chatID, userID int, title string) error
 }
 
 type ChatService struct {
@@ -24,16 +29,42 @@ func NewChatService(Storage Storage) ChatService {
 	}
 }
 
-func (cs *ChatService) GetChatMembersIds(chatID int) ([]int, error) {
-	return cs.Storage.GetChatMembersIds(chatID)
+func (cs *ChatService) GetChatMembersIDs(chatID int) ([]int, error) {
+	return cs.Storage.GetChatMembersIDs(chatID)
 }
 
 func (cs *ChatService) AddChatMembers(chatID int, userIDs []int) ([]int, error) {
 	return cs.Storage.AddChatMembers(chatID, userIDs)
 }
 
-func (cs *ChatService) EditChatTitle(chatID int, title string) error {
-	return cs.Storage.UpdateChatTitle(chatID, title)
+func (cs *ChatService) EditChatTitle(userID, chatID int, newName string) ([]int, error) {
+	chat, err := cs.Storage.GetByID(chatID)
+	if err != nil {
+		return nil, err
+	}
+
+	if chat.Type == 0 {
+		if err := cs.Storage.UpdateMemberCustomTitle(chatID, userID, newName); err != nil {
+			return nil, err
+		}
+
+		return []int{}, nil // no need to call broadcast
+	}
+
+	hasRight, err := cs.Storage.HasPermission(userID, chatID, models.RightEditChat)
+	if err != nil {
+		return nil, err
+	}
+
+	if !hasRight {
+		return nil, models.ErrPermissionDenied
+	}
+
+	if err := cs.Storage.UpdateChatTitle(chatID, newName); err != nil {
+		return nil, err
+	}
+
+	return cs.Storage.GetChatMembersIDs(chatID)
 }
 
 func (cs *ChatService) CreatePrivateChat(userID1, userID2 int) (*models.Chat, []int, error) {

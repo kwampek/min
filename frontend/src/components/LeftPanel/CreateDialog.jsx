@@ -5,6 +5,7 @@ const CreateDialog = ({ mode, users, onClose, onSubmit }) => {
   const [description, setDescription] = useState('');
   const [photo, setPhoto] = useState(null);
   const [selectedUserIds, setSelectedUserIds] = useState([]);
+  const reader = new FileReader();
 
   const isChat = mode === 'chat';
   const title = isChat ? 'Create Chat' : 'Create Channel';
@@ -44,6 +45,7 @@ const CreateDialog = ({ mode, users, onClose, onSubmit }) => {
             name: photo.name,
             type: photo.type,
             size: photo.size,
+            data: reader.result.split(",")[1],
           }
         : null,
       selectedUsers,
