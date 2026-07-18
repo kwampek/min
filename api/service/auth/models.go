@@ -5,11 +5,6 @@ import (
 	"time"
 )
 
-type Device struct {
-	DeviceName string
-	IPAddress  string
-}
-
 type RegisterRequest struct {
 	Login       string `json:"login"`
 	Password    string `json:"password"`
