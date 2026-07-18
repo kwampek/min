@@ -93,11 +93,18 @@ CREATE TABLE IF NOT EXISTS Messenger.FolderChats (
     FOREIGN KEY (chat_id) REFERENCES Messenger.Chats(chat_id)
 );
 
-CREATE TABLE IF NOT EXISTS Messenger.Tokens (
-    user_id INTEGER NOT NULL REFERENCES Messenger.Users(user_id),
-    token TEXT NOT NULL,
+CREATE TABLE Messenger.Sessions (
+    session_id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL,
+    token_hash TEXT NOT NULL,
+    device_name VARCHAR(128),
+    ip_address VARCHAR(64),
+    created_at TIMESTAMP DEFAULT now(),
+    last_activity TIMESTAMP DEFAULT now(),
     expires_at TIMESTAMP NOT NULL,
-    created_at TIMESTAMP NOT NULL DEFAULT now()
+    revoked BOOLEAN DEFAULT FALSE,
+
+    FOREIGN KEY(user_id) REFERENCES Messenger.Users(user_id)
 );
 
 CREATE UNIQUE INDEX idx_users_login_unique ON Messenger.Users(LOWER(login));
