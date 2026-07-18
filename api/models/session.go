@@ -7,6 +7,11 @@ import (
 	"github.com/mileusna/useragent"
 )
 
+type Identifier struct {
+	SessionID int
+	UserID    int
+}
+
 type Device struct {
 	DeviceName string
 	IPAddress  string
@@ -20,11 +25,12 @@ func DeviceFromRaw(userAgent, IP string) Device {
 }
 
 type Session struct {
-	UserID     int
-	TokenHash  string
-	DeviceName string
-	IPAddress  string
-	ExpiresAt  time.Time
+	SessionID  int       `db:"session_id"`
+	UserID     int       `db:"user_id"`
+	TokenHash  string    `db:"token_hash"`
+	DeviceName string    `db:"device_name"`
+	IPAddress  string    `db:"ip_address"`
+	ExpiresAt  time.Time `db:"expires_at"`
 }
 
 func ParseUserAgent(userAgent string) string {

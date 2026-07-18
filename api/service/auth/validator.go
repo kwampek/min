@@ -33,6 +33,6 @@ func (v *Validator) ValidateEmail(email string) error {
 	return nil
 }
 
-func (s *AuthService) ValidateSession(token string) (int, error) {
+func (s *AuthService) ValidateSession(token string) (int, int, error) {
 	return s.Storage.ValidateSession(token)
 }

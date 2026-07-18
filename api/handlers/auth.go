@@ -106,3 +106,7 @@ func (api *API) LoginHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to encode response", http.StatusInternalServerError)
 	}
 }
+
+func (api *API) LogoutHandler(ID models.Identifier, payload json.RawMessage) error {
+	return api.AuthService.Logout(ID)
+}

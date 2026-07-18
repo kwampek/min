@@ -3,15 +3,18 @@ package storage
 import (
 	"api/models"
 	"crypto/sha256"
+	"database/sql"
 	"encoding/hex"
 	"errors"
+	"fmt"
 
 	"github.com/jackc/pgx/v5/pgconn"
 )
 
 var (
-	ErrLoginExists = errors.New("")
-	ErrEmailExists = errors.New("")
+	ErrLoginExists    = errors.New("login already exists")
+	ErrEmailExists    = errors.New("email already exists")
+	ErrInvalidSession = errors.New("invalid session")
 )
 
 func (s *Storage) CreateUser(user models.User) (int, error) {
@@ -164,45 +167,42 @@ func (s *Storage) GetUserByID(id int) (models.User, error) {
 // 	return userID, nil
 // }
 
-func (s *Storage) ValidateSession(token string) (int, error) {
+func (s *Storage) ValidateSession(token string) (models.Identifier, error) {
+	var userID int
+	var sessionID int
+
 	hash := sha256.Sum256([]byte(token))
 	tokenHash := hex.EncodeToString(hash[:])
 
-	tx, err := s.DB.Begin()
+	err := s.DB.QueryRow(`
+        UPDATE Messenger.Sessions
+        SET last_activity = NOW()
+        WHERE token_hash = $1
+          AND revoked = FALSE
+          AND expires_at > NOW()
+        RETURNING 
+            session_id,
+            user_id,
+			token_hash,
+            device_name,
+            ip_address,
+            expires_at
+    `, tokenHash).Scan(
+		&sessionID,
+		&userID,
+	)
+
+	if err == sql.ErrNoRows {
+		return models.Identifier{}, ErrInvalidSession
+	}
 	if err != nil {
-		return 0, err
-	}
-	defer tx.Rollback()
-
-	var userID int
-
-	err = tx.QueryRow(`
-		SELECT user_id
-		FROM Messenger.Sessions
-		WHERE token_hash = $1
-		  AND revoked = FALSE
-		  AND expires_at > NOW()
-	`, tokenHash).Scan(&userID)
-
-	if err != nil {
-		return 0, err
+		return models.Identifier{}, fmt.Errorf("validate session: %w", err)
 	}
 
-	_, err = tx.Exec(`
-		UPDATE Messenger.Sessions
-		SET last_activity = NOW()
-		WHERE token_hash = $1
-	`, tokenHash)
-
-	if err != nil {
-		return 0, err
-	}
-
-	if err := tx.Commit(); err != nil {
-		return 0, err
-	}
-
-	return userID, nil
+	return models.Identifier{
+		SessionID: sessionID,
+		UserID:    userID,
+	}, nil
 }
 
 func (s *Storage) CreateSession(session models.Session) error {

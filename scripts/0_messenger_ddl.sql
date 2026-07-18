@@ -1,7 +1,7 @@
 CREATE SCHEMA IF NOT EXISTS Messenger;
 
 CREATE TABLE IF NOT EXISTS Messenger.MediaFiles (
-    media_id SERIAL PRIMARY KEY,
+    media_id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     type SMALLINT NOT NULL,
     file_url TEXT NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT now()
@@ -21,7 +21,7 @@ CREATE TABLE IF NOT EXISTS Messenger.Users (
 );
 
 CREATE TABLE IF NOT EXISTS Messenger.Chats (
-    chat_id SERIAL PRIMARY KEY,
+    chat_id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     type SMALLINT NOT NULL,
     title VARCHAR(32) NOT NULL,
     description TEXT,
@@ -34,7 +34,7 @@ CREATE TABLE IF NOT EXISTS Messenger.Chats (
 );
 
 CREATE TABLE IF NOT EXISTS Messenger.ChatMembers (
-    chat_member_id SERIAL PRIMARY KEY,
+    chat_member_id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     chat_id INTEGER NOT NULL,
     user_id INTEGER NOT NULL,
     custom_title VARCHAR(32) DEFAULT NULL,
@@ -47,7 +47,7 @@ CREATE TABLE IF NOT EXISTS Messenger.ChatMembers (
 );
 
 CREATE TABLE IF NOT EXISTS Messenger.Messages (
-    message_id SERIAL PRIMARY KEY,
+    message_id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     message_text TEXT,
     from_chat_member_id INTEGER NOT NULL,
     media_id INTEGER,
@@ -59,7 +59,7 @@ CREATE TABLE IF NOT EXISTS Messenger.Messages (
 );
 
 CREATE TABLE IF NOT EXISTS Messenger.Calls (
-    call_id SERIAL PRIMARY KEY,
+    call_id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     start_time TIMESTAMP NOT NULL,
     end_time TIMESTAMP
 );
@@ -76,7 +76,7 @@ CREATE TABLE IF NOT EXISTS Messenger.CallMembers (
 );
 
 CREATE TABLE IF NOT EXISTS Messenger.Folders (
-    folder_id SERIAL PRIMARY KEY,
+    folder_id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     user_id INTEGER NOT NULL,
     folder_name VARCHAR(32),
 
@@ -84,7 +84,7 @@ CREATE TABLE IF NOT EXISTS Messenger.Folders (
 );
 
 CREATE TABLE IF NOT EXISTS Messenger.FolderChats (
-    id SERIAL PRIMARY KEY,
+    id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     folder_id INTEGER NOT NULL,
     chat_id INTEGER NOT NULL,
     UNIQUE(folder_id, chat_id),
@@ -94,7 +94,7 @@ CREATE TABLE IF NOT EXISTS Messenger.FolderChats (
 );
 
 CREATE TABLE Messenger.Sessions (
-    session_id SERIAL PRIMARY KEY,
+    session_id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     user_id INTEGER NOT NULL,
     token_hash TEXT NOT NULL,
     device_name VARCHAR(128),

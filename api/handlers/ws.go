@@ -10,7 +10,7 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-type WSHandlerFunc func(userID int, payload json.RawMessage) error
+type WSHandlerFunc func(id models.Identifier, payload json.RawMessage) error
 
 type WsRouter struct {
 	handlers map[string]WSHandlerFunc
@@ -28,6 +28,7 @@ func NewWsRouter(api *API) WsRouter {
 			"edit_chat_name":        api.EditChatNameHandler,
 			"edit_folder_name":      api.EditFolderNameHandler,
 			"toggle_chat_in_folder": api.ToggleChatInFolderHandler,
+			"logout":                api.Logout,
 		},
 	}
 }
@@ -42,10 +43,10 @@ type WSMessageWrapper struct {
 	Payload json.RawMessage `json:"payload"`
 }
 
-func (a *API) authenticateWS(r *http.Request) (*models.Session, error) {
+func (a *API) authenticateWS(r *http.Request) (models.Identifier, error) {
 	token := r.URL.Query().Get("token")
 	if token == "" {
-		return nil, errors.New("missing token")
+		return models.Identifier{}, errors.New("missing token")
 	}
 
 	return a.AuthService.ValidateSession(token)
@@ -69,7 +70,7 @@ func (A *API) sendInitialState(userID int, conn *websocket.Conn) error {
 }
 
 func (A *API) WsHandler(w http.ResponseWriter, r *http.Request) {
-	userID, err := A.authenticateWS(r)
+	ID, err := A.authenticateWS(r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
@@ -80,10 +81,10 @@ func (A *API) WsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	A.WsService.AddClient(userID, conn)
-	defer A.WsService.RemoveClient(userID)
+	A.WsService.AddClient(ID, conn)
+	defer A.WsService.RemoveConnection(ID)
 
-	if err := A.sendInitialState(userID, conn); err != nil {
+	if err := A.sendInitialState(ID, conn); err != nil {
 		return
 	}
 

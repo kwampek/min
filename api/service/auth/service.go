@@ -7,7 +7,6 @@ import (
 	"database/sql"
 	"encoding/hex"
 	"errors"
-	"net/http"
 	"time"
 
 	"golang.org/x/crypto/bcrypt"
@@ -25,18 +24,6 @@ func NewAuthService(Storage Storage, TokenService tokens.TokenService) AuthServi
 		TokenService: TokenService,
 		Validator:    NewValidator(),
 	}
-}
-
-func GetSessionInfo(r *http.Request, userID int, token string) (models.Session, error) {
-	hash := sha256.Sum256([]byte(token))
-
-	return models.Session{
-		UserID:     userID,
-		TokenHash:  hex.EncodeToString(hash[:]),
-		DeviceName: r.UserAgent(),
-		IPAddress:  r.RemoteAddr,
-		ExpiresAt:  time.Now().Add(30 * 24 * time.Hour),
-	}, nil
 }
 
 func hashToken(token string) string {
@@ -94,6 +81,7 @@ func (s *AuthService) Register(req RegisterRequest, device models.Device) (*Auth
 		return nil, err
 	}
 
+	// TODO Redundant info
 	return &AuthResponse{
 		UserID:      userID,
 		Login:       req.Login,
@@ -149,8 +137,4 @@ func (s *AuthService) Login(req LoginRequest, device models.Device) (*AuthRespon
 		Token:       token,
 		CreatedAt:   user.CreatedAt,
 	}, nil
-}
-
-func (s *AuthService) Logout(token string) error {
-	return s.Storage.RevokeSession(hashToken(token))
 }

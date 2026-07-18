@@ -10,16 +10,18 @@ import (
 )
 
 type WsService struct {
-	mu      sync.RWMutex
-	clients map[int]*websocket.Conn
+	mu           sync.RWMutex
+	clients      map[int]*websocket.Conn
+	userSessions map[int][]int
 
 	upgrader websocket.Upgrader
 }
 
 func NewWsService() WsService {
 	return WsService{
-		mu:      sync.RWMutex{},
-		clients: make(map[int]*websocket.Conn),
+		mu:           sync.RWMutex{},
+		clients:      make(map[int]*websocket.Conn),
+		userSessions: make(map[int][]int),
 		upgrader: websocket.Upgrader{
 			CheckOrigin: func(r *http.Request) bool {
 				return true
@@ -28,13 +30,15 @@ func NewWsService() WsService {
 	}
 }
 
-func (ws *WsService) AddClient(userID int, conn *websocket.Conn) {
+func (ws *WsService) AddClient(sessionID, userID int, conn *websocket.Conn) {
 	ws.mu.Lock()
 	defer ws.mu.Unlock()
+
 	ws.clients[userID] = conn
+	ws.userSessions[userID] = append(ws.userSessions[userID], sessionID)
 }
 
-func (ws *WsService) RemoveClient(userID int) {
+func (ws *WsService) RemoveConnection(sessionID, userID int) {
 	ws.mu.Lock()
 	defer ws.mu.Unlock()
 
@@ -42,6 +46,19 @@ func (ws *WsService) RemoveClient(userID int) {
 		conn.Close()
 		delete(ws.clients, userID)
 	}
+}
+
+func (ws *WsService) RemoveClient(sessionID, userID int) {
+	ws.RemoveClient(sessionID, userID)
+
+	userSessions := ws.userSessions[userID]
+	for i, sid := range userSessions {
+		if sid == sessionID {
+			userSessions[i] = userSessions[len(userSessions)-1]
+			break
+		}
+	}
+	ws.userSessions[userID] = userSessions[:len(userSessions)-1]
 }
 
 func (h *WsService) FastSend(conn *websocket.Conn, payload any) error {
