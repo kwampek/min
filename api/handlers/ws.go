@@ -28,7 +28,7 @@ func NewWsRouter(api *API) WsRouter {
 			"edit_chat_name":        api.EditChatNameHandler,
 			"edit_folder_name":      api.EditFolderNameHandler,
 			"toggle_chat_in_folder": api.ToggleChatInFolderHandler,
-			"logout":                api.Logout,
+			"logout":                api.LogoutHandler,
 		},
 	}
 }
@@ -52,8 +52,8 @@ func (a *API) authenticateWS(r *http.Request) (models.Identifier, error) {
 	return a.AuthService.ValidateSession(token)
 }
 
-func (A *API) sendInitialState(userID int, conn *websocket.Conn) error {
-	allMessages, err := A.MessageService.LoadAllMessages(userID)
+func (A *API) sendInitialState(ID models.Identifier, conn *websocket.Conn) error {
+	allMessages, err := A.MessageService.LoadAllMessages(ID.UserID)
 	if err != nil {
 		log.Println("load messages error:", err)
 		_ = A.WsService.FastSend(conn, map[string]interface{}{
@@ -106,7 +106,7 @@ func (A *API) WsHandler(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 
-		if err := handler(userID, msg.Payload); err != nil {
+		if err := handler(ID, msg.Payload); err != nil {
 			log.Println(err)
 		}
 	}

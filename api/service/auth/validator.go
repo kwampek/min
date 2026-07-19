@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"api/models"
 	"errors"
 	"regexp"
 )
@@ -33,6 +34,6 @@ func (v *Validator) ValidateEmail(email string) error {
 	return nil
 }
 
-func (s *AuthService) ValidateSession(token string) (int, int, error) {
+func (s *AuthService) ValidateSession(token string) (models.Identifier, error) {
 	return s.Storage.ValidateSession(token)
 }

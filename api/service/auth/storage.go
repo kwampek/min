@@ -13,6 +13,6 @@ type Storage interface {
 	// IsTokenExists(token string) (bool, error)
 
 	CreateSession(session models.Session) error
-	ValidateSession(token string) (int, int, error)
+	ValidateSession(token string) (models.Identifier, error)
 	RevokeSession(tokenHash string) error
 }

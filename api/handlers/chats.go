@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"api/models"
 	"database/sql"
 	"encoding/json"
 	"log"
@@ -59,7 +60,7 @@ func (a *API) createChatHandler(typeID int, title, description string, avatarID 
 	)
 }
 
-func (a *API) CreatePrivateChatHandler(userID int, payload json.RawMessage) error {
+func (a *API) CreatePrivateChatHandler(ID models.Identifier, payload json.RawMessage) error {
 	var createPayload WSCreatePayload
 
 	if err := json.Unmarshal(payload, &createPayload); err != nil {
@@ -67,10 +68,10 @@ func (a *API) CreatePrivateChatHandler(userID int, payload json.RawMessage) erro
 		return err
 	}
 
-	return a.createPrivateChatHandler(userID, createPayload.UserId)
+	return a.createPrivateChatHandler(ID.UserID, createPayload.UserId)
 }
 
-func (a *API) CreateChatHandler(userID int, payload json.RawMessage) error {
+func (a *API) CreateChatHandler(ID models.Identifier, payload json.RawMessage) error {
 	var createCGPayload WSCreateChatGroupPayload
 
 	if err := json.Unmarshal(payload, &createCGPayload); err != nil {
@@ -85,7 +86,7 @@ func (a *API) CreateChatHandler(userID int, payload json.RawMessage) error {
 		createCGPayload.Title,
 		createCGPayload.Description,
 		sql.NullInt64{},
-		userID,
+		ID.UserID,
 		createCGPayload.Users,
 	)
 }
@@ -100,14 +101,14 @@ type WSChatNameChanged struct {
 	NewName string `json:"new_name"`
 }
 
-func (a *API) EditChatNameHandler(userID int, payload json.RawMessage) error {
+func (a *API) EditChatNameHandler(ID models.Identifier, payload json.RawMessage) error {
 	var p WSEditChatNamePayload
 
 	if err := json.Unmarshal(payload, &p); err != nil {
 		return err
 	}
 
-	memberIDs, err := a.ChatService.EditChatTitle(userID, p.ChatId, p.NewName)
+	memberIDs, err := a.ChatService.EditChatTitle(ID.UserID, p.ChatId, p.NewName)
 	if err != nil {
 		return err
 	}

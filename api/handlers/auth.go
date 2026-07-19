@@ -108,5 +108,6 @@ func (api *API) LoginHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (api *API) LogoutHandler(ID models.Identifier, payload json.RawMessage) error {
-	return api.AuthService.Logout(ID)
+	api.WsService.RemoveClient(ID)
+	return nil
 }

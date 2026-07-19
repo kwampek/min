@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"api/models"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -28,7 +29,7 @@ func (A *API) searchUsers(userID int, query string) error {
 	)
 }
 
-func (A *API) SearchUsersHandler(userID int, payload json.RawMessage) error {
+func (A *API) SearchUsersHandler(ID models.Identifier, payload json.RawMessage) error {
 	log.Println("Nu pozya")
 
 	var wSSearchPayload WSSearchPayload
@@ -36,7 +37,7 @@ func (A *API) SearchUsersHandler(userID int, payload json.RawMessage) error {
 		log.Println("search payload parse error:", err)
 		return err
 	}
-	return A.searchUsers(userID, wSSearchPayload.Text)
+	return A.searchUsers(ID.UserID, wSSearchPayload.Text)
 }
 
 func (A *API) EditProfile(payload map[string]string) error {
@@ -68,7 +69,7 @@ func (A *API) EditProfile(payload map[string]string) error {
 	return err
 }
 
-func (A *API) EditProfileHandler(userID int, payload json.RawMessage) error {
+func (A *API) EditProfileHandler(ID models.Identifier, payload json.RawMessage) error {
 	var editProfilePayload map[string]string
 
 	if err := json.Unmarshal(payload, &editProfilePayload); err != nil {

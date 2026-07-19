@@ -1,6 +1,7 @@
 package ws
 
 import (
+	"api/models"
 	"log"
 	"net/http"
 	"sync"
@@ -30,35 +31,36 @@ func NewWsService() WsService {
 	}
 }
 
-func (ws *WsService) AddClient(sessionID, userID int, conn *websocket.Conn) {
+func (ws *WsService) AddClient(ID models.Identifier, conn *websocket.Conn) {
 	ws.mu.Lock()
 	defer ws.mu.Unlock()
 
-	ws.clients[userID] = conn
-	ws.userSessions[userID] = append(ws.userSessions[userID], sessionID)
+	ws.clients[ID.UserID] = conn
+	ws.userSessions[ID.UserID] = append(ws.userSessions[ID.UserID], ID.SessionID)
 }
 
-func (ws *WsService) RemoveConnection(sessionID, userID int) {
+func (ws *WsService) RemoveConnection(ID models.Identifier) {
 	ws.mu.Lock()
 	defer ws.mu.Unlock()
 
-	if conn, ok := ws.clients[userID]; ok {
+	if conn, ok := ws.clients[ID.UserID]; ok {
 		conn.Close()
-		delete(ws.clients, userID)
+		delete(ws.clients, ID.UserID)
 	}
 }
 
-func (ws *WsService) RemoveClient(sessionID, userID int) {
-	ws.RemoveClient(sessionID, userID)
+func (ws *WsService) RemoveClient(ID models.Identifier) {
+	ws.RemoveConnection(ID)
 
-	userSessions := ws.userSessions[userID]
+	// std::swap with last removing
+	userSessions := ws.userSessions[ID.UserID]
 	for i, sid := range userSessions {
-		if sid == sessionID {
+		if sid == ID.SessionID {
 			userSessions[i] = userSessions[len(userSessions)-1]
 			break
 		}
 	}
-	ws.userSessions[userID] = userSessions[:len(userSessions)-1]
+	ws.userSessions[ID.UserID] = userSessions[:len(userSessions)-1]
 }
 
 func (h *WsService) FastSend(conn *websocket.Conn, payload any) error {
