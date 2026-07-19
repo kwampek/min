@@ -35,7 +35,7 @@ func (ws *WsService) AddClient(ID models.Identifier, conn *websocket.Conn) {
 	ws.mu.Lock()
 	defer ws.mu.Unlock()
 
-	ws.clients[ID.UserID] = conn
+	ws.clients[ID.SessionID] = conn
 	ws.userSessions[ID.UserID] = append(ws.userSessions[ID.UserID], ID.SessionID)
 }
 
@@ -43,9 +43,9 @@ func (ws *WsService) RemoveConnection(ID models.Identifier) {
 	ws.mu.Lock()
 	defer ws.mu.Unlock()
 
-	if conn, ok := ws.clients[ID.UserID]; ok {
+	if conn, ok := ws.clients[ID.SessionID]; ok {
 		conn.Close()
-		delete(ws.clients, ID.UserID)
+		delete(ws.clients, ID.SessionID)
 	}
 }
 
@@ -71,16 +71,21 @@ func (h *WsService) FastSend(conn *websocket.Conn, payload any) error {
 	return conn.WriteJSON(payload)
 }
 
-func (h *WsService) Send(userID int, payload any) error {
+func (h *WsService) Send(ID models.Identifier, payload any) error {
 	h.mu.RLock()
-	conn, ok := h.clients[userID]
+	conn, ok := h.clients[ID.SessionID]
 	h.mu.RUnlock()
 
 	if !ok || conn == nil {
 		return nil
 	}
 
-	return conn.WriteJSON(payload)
+	err := conn.WriteJSON(payload)
+	if err != nil {
+		h.RemoveConnection(ID)
+	}
+
+	return err
 }
 
 func (h *WsService) BroadcastToUsers(users []int, senderID int, payload any) error {

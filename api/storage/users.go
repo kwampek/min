@@ -14,7 +14,7 @@ var fields = []string{
 	"sex",
 }
 
-func (s *Storage) SearchUsers(userId int, query string) ([]models.UserWAdditionlInfo, error) {
+func (s *Storage) SearchUsers(userID int, query string) ([]models.UserWAdditionlInfo, error) {
 	searchPattern := "%" + query + "%"
 
 	rows, err := s.DB.Query(`
@@ -24,7 +24,7 @@ func (s *Storage) SearchUsers(userId int, query string) ([]models.UserWAdditionl
 			u.password_hash,
 			u.phone_number, 
 			u.email, 
-			u.avatar_link, 
+			u.avatar_id, 
 			u.created_at, 
 			u.search_privacy,
 			EXISTS (
@@ -40,7 +40,7 @@ func (s *Storage) SearchUsers(userId int, query string) ([]models.UserWAdditionl
 		AND (u.search_privacy IS NULL OR u.search_privacy = TRUE)
 		AND u.user_id != $1
 		LIMIT 10
-    `, userId, searchPattern)
+    `, userID, searchPattern)
 	if err != nil {
 		return nil, err
 	}
@@ -55,7 +55,7 @@ func (s *Storage) SearchUsers(userId int, query string) ([]models.UserWAdditionl
 			&u.PasswordHash,
 			&u.PhoneNumber,
 			&u.Email,
-			&u.AvatarLink,
+			&u.AvatarID,
 			&u.CreatedAt,
 			&u.SearchPrivacy,
 			&u.HaveChat,

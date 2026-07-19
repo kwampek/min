@@ -4,6 +4,8 @@ CREATE TABLE IF NOT EXISTS Messenger.MediaFiles (
     media_id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     type SMALLINT NOT NULL,
     file_url TEXT NOT NULL,
+    mime_type VARCHAR(64),
+    size_bytes BIGINT,
     created_at TIMESTAMP NOT NULL DEFAULT now()
 );
 
@@ -15,9 +17,11 @@ CREATE TABLE IF NOT EXISTS Messenger.Users (
     email VARCHAR(254),
     birthday DATE,
     sex BOOLEAN,
-    avatar_link TEXT,
+    avatar_id INTEGER,
     created_at TIMESTAMP NOT NULL DEFAULT now(),
-    search_privacy BOOLEAN NOT NULL DEFAULT TRUE
+    search_privacy BOOLEAN NOT NULL DEFAULT TRUE,
+
+    FOREIGN KEY (avatar_id) REFERENCES Messenger.MediaFiles(media_id)
 );
 
 CREATE TABLE IF NOT EXISTS Messenger.Chats (
@@ -30,7 +34,8 @@ CREATE TABLE IF NOT EXISTS Messenger.Chats (
     created_at TIMESTAMP NOT NULL,
     search_privacy BOOLEAN DEFAULT true,
 
-    FOREIGN KEY (creator_id) REFERENCES Messenger.Users(user_id)
+    FOREIGN KEY (creator_id) REFERENCES Messenger.Users(user_id),
+    FOREIGN KEY (avatar_id) REFERENCES Messenger.MediaFiles(media_id)
 );
 
 CREATE TABLE IF NOT EXISTS Messenger.ChatMembers (
@@ -51,7 +56,7 @@ CREATE TABLE IF NOT EXISTS Messenger.Messages (
     message_text TEXT,
     from_chat_member_id INTEGER NOT NULL,
     media_id INTEGER,
-    send_time TIMESTAMP,
+    send_time TIMESTAMP NOT NULL DEFAULT now(),
     mstatus BOOLEAN DEFAULT false,
 
     FOREIGN KEY (from_chat_member_id) REFERENCES Messenger.ChatMembers(chat_member_id),
@@ -93,7 +98,7 @@ CREATE TABLE IF NOT EXISTS Messenger.FolderChats (
     FOREIGN KEY (chat_id) REFERENCES Messenger.Chats(chat_id)
 );
 
-CREATE TABLE Messenger.Sessions (
+CREATE TABLE IF NOT EXISTS Messenger.Sessions (
     session_id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     user_id INTEGER NOT NULL,
     token_hash TEXT NOT NULL,
@@ -110,3 +115,12 @@ CREATE TABLE Messenger.Sessions (
 CREATE UNIQUE INDEX idx_users_login_unique ON Messenger.Users(LOWER(login));
 CREATE UNIQUE INDEX idx_users_email_unique ON Messenger.Users(LOWER(email)) WHERE email IS NOT NULL AND email != '';
 CREATE UNIQUE INDEX idx_users_phone_unique ON Messenger.Users(phone_number) WHERE phone_number IS NOT NULL AND phone_number != '';
+CREATE UNIQUE INDEX idx_chatmembers_chat_user ON Messenger.ChatMembers(chat_id, user_id);
+CREATE INDEX idx_chatmembers_user ON Messenger.ChatMembers(user_id);
+CREATE INDEX idx_chatmembers_chat ON Messenger.ChatMembers(chat_id);
+-- CREATE INDEX idx_messages_member_time ON Messenger.Messages(from_chat_member_id, send_time DESC);
+CREATE INDEX idx_chatmembers_chat_member ON Messenger.ChatMembers(chat_id, chat_member_id);
+CREATE INDEX idx_folderchats_chat ON Messenger.FolderChats(chat_id);
+CREATE INDEX idx_folders_user ON Messenger.Folders(user_id);
+CREATE UNIQUE INDEX idx_sessions_token ON Messenger.Sessions(token_hash);
+CREATE INDEX idx_sessions_user ON Messenger.Sessions(user_id);

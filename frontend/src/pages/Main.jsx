@@ -7,9 +7,10 @@ import '../assets/styles/main_style.css';
 import { setActiveChat, addMessage } from '../store/slices/chatSlice';
 import { getWebSocket, initWebSocket } from '../modules/ws';
 import { useEffect, useState } from 'react';
-
+import { useNavigate } from "react-router-dom";
 
 const App = () => {
+  const navigate = useNavigate();
   const dispatch = useDispatch();
   const { activeChat } = useSelector((state) => state.chats);
   const { userId } = useSelector((state) => state.user)
@@ -20,10 +21,10 @@ const App = () => {
 
 
   useEffect(() => {
-    if (userId) {
-      initWebSocket(userId);
-    }
-  }, [userId]);
+      initWebSocket({
+          onUnauthorized: () => navigate("/login"),
+      });
+  }, [navigate]);
 
 
   const ws = getWebSocket();

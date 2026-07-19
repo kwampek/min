@@ -101,9 +101,9 @@ func (cs *ChatService) CreateChat(typeID int, title, description string, mediaID
 }
 
 func (cs *ChatService) CreateGroupChannel(title, description string, mediaID sql.NullInt64, members []int, creatorID int) (*models.Chat, error) {
-	return cs.CreateChat(models.GroupChanellType, title, description, mediaID, members, creatorID)
+	return cs.CreateChat(models.ChannelChat, title, description, mediaID, members, creatorID)
 }
 
 func (cs *ChatService) CreateGroupChat(title, description string, mediaID sql.NullInt64, members []int, creatorID int) (*models.Chat, error) {
-	return cs.CreateChat(models.GroupChatType, title, description, mediaID, members, creatorID)
+	return cs.CreateChat(models.GroupChat, title, description, mediaID, members, creatorID)
 }

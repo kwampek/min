@@ -26,7 +26,7 @@ func (s *Storage) CreateUser(user models.User) (int, error) {
 			password_hash,
 			email,
 			phone_number,
-			avatar_link
+			avatar_id
 		)
 		VALUES ($1, $2, $3, $4, $5)
 		RETURNING user_id
@@ -35,7 +35,7 @@ func (s *Storage) CreateUser(user models.User) (int, error) {
 		user.PasswordHash,
 		user.Email,
 		user.PhoneNumber,
-		user.AvatarLink,
+		user.AvatarID,
 	).Scan(&id)
 
 	var pgErr *pgconn.PgError
@@ -64,7 +64,7 @@ func (s *Storage) GetUserByLogin(login string) (models.User, error) {
 			password_hash,
 			email,
 			phone_number,
-			avatar_link,
+			avatar_id,
 			created_at,
 			search_privacy
 		FROM Messenger.Users
@@ -75,7 +75,7 @@ func (s *Storage) GetUserByLogin(login string) (models.User, error) {
 		&user.PasswordHash,
 		&user.Email,
 		&user.PhoneNumber,
-		&user.AvatarLink,
+		&user.AvatarID,
 		&user.CreatedAt,
 		&user.SearchPrivacy,
 	)
@@ -93,7 +93,7 @@ func (s *Storage) GetUserByID(id int) (models.User, error) {
 			password_hash,
 			email,
 			phone_number,
-			avatar_link,
+			avatar_id,
 			created_at,
 			search_privacy
 		FROM Messenger.Users
@@ -104,7 +104,7 @@ func (s *Storage) GetUserByID(id int) (models.User, error) {
 		&user.PasswordHash,
 		&user.Email,
 		&user.PhoneNumber,
-		&user.AvatarLink,
+		&user.AvatarID,
 		&user.CreatedAt,
 		&user.SearchPrivacy,
 	)
@@ -182,22 +182,22 @@ func (s *Storage) ValidateSession(token string) (models.Identifier, error) {
           AND expires_at > NOW()
         RETURNING 
             session_id,
-            user_id,
-			token_hash,
-            device_name,
-            ip_address,
-            expires_at
+            user_id
     `, tokenHash).Scan(
 		&sessionID,
 		&userID,
 	)
 
 	if err == sql.ErrNoRows {
+		fmt.Println("ERROR: No Rows")
 		return models.Identifier{}, ErrInvalidSession
 	}
 	if err != nil {
+		fmt.Println("ERROR: ", err)
 		return models.Identifier{}, fmt.Errorf("validate session: %w", err)
 	}
+
+	fmt.Println("AUTH SUCCESS")
 
 	return models.Identifier{
 		SessionID: sessionID,

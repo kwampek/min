@@ -6,7 +6,6 @@ import (
 	"crypto/sha256"
 	"database/sql"
 	"encoding/hex"
-	"errors"
 	"time"
 
 	"golang.org/x/crypto/bcrypt"
@@ -32,13 +31,7 @@ func hashToken(token string) string {
 }
 
 func (s *AuthService) Register(req RegisterRequest, device models.Device) (*AuthResponse, error) {
-	if err := s.Validator.ValidateLogin(req.Login); err != nil {
-		return nil, err
-	}
-	if err := s.Validator.ValidatePassword(req.Password); err != nil {
-		return nil, err
-	}
-	if err := s.Validator.ValidateEmail(req.Email); err != nil {
+	if err := s.Validator.ValidateRegister(req); err != nil {
 		return nil, err
 	}
 
@@ -93,12 +86,10 @@ func (s *AuthService) Register(req RegisterRequest, device models.Device) (*Auth
 }
 
 func (s *AuthService) Login(req LoginRequest, device models.Device) (*AuthResponse, error) {
-	if err := s.Validator.ValidateLogin(req.Login); err != nil {
-		return nil, err
-	}
+	// TODO need to be transcation
 
-	if req.Password == "" {
-		return nil, errors.New("password is required")
+	if err := s.Validator.Validate(req); err != nil {
+		return nil, err
 	}
 
 	user, err := s.Storage.GetUserByLogin(req.Login)

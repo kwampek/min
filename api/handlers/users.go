@@ -11,14 +11,14 @@ type WSSearchPayload struct {
 	Text string `json:"query"`
 }
 
-func (A *API) searchUsers(userID int, query string) error {
-	users, err := A.UserService.SearchUsers(userID, query)
+func (A *API) searchUsers(ID models.Identifier, query string) error {
+	users, err := A.UserService.SearchUsers(ID.UserID, query)
 	if err != nil {
 		return err
 	}
 
 	return A.WsService.Send(
-		userID,
+		ID,
 		map[string]any{
 			"type": "search",
 			"payload": map[string]any{
@@ -37,7 +37,8 @@ func (A *API) SearchUsersHandler(ID models.Identifier, payload json.RawMessage) 
 		log.Println("search payload parse error:", err)
 		return err
 	}
-	return A.searchUsers(ID.UserID, wSSearchPayload.Text)
+
+	return A.searchUsers(ID, wSSearchPayload.Text)
 }
 
 func (A *API) EditProfile(payload map[string]string) error {

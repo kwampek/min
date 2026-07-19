@@ -16,9 +16,9 @@ const (
 )
 
 const (
-	PrivateChatType = 0
-	GroupChatType
-	GroupChanellType
+	PrivateChat = 0
+	GroupChat   = 1
+	ChannelChat = 2
 )
 
 var (

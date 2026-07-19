@@ -4,6 +4,7 @@ import (
 	"api/models"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log"
 	"net/http"
 
@@ -49,6 +50,7 @@ func (a *API) authenticateWS(r *http.Request) (models.Identifier, error) {
 		return models.Identifier{}, errors.New("missing token")
 	}
 
+	fmt.Println("AUTH TRY: ", token)
 	return a.AuthService.ValidateSession(token)
 }
 
