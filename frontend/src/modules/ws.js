@@ -49,6 +49,7 @@ export function initWebSocket({ onUnauthorized }) {
   };
 
   socket.onerror = (e) => {
+    // TODO
     // theoretically there won't be errors errors during ws send 
     // server catches all errors and revokes connection
 
@@ -60,6 +61,9 @@ export function initWebSocket({ onUnauthorized }) {
         onUnauthorized?.();
     }
   };
+
+
+  // better to greedy add objects and confirm them with ws msges
   
   socket.onmessage = (event) => {
     try {

@@ -4,6 +4,11 @@ import { useNavigate } from 'react-router-dom';
 import { getWebSocket } from '../../modules/ws';
 import CreateDialog from './CreateDialog';
 
+
+const CHAT_TYPE_PRIVATE = 0;
+const CHAT_TYPE_GROUP = 1;
+const CHAT_TYPE_CHANNEL = 2;
+
 const LeftPanel = ({ closePanel }) => {
   const navigate = useNavigate();
   const chats = useSelector((state) => state.chats.chats);
@@ -49,27 +54,14 @@ const LeftPanel = ({ closePanel }) => {
 
   const handleCreateSubmit = ({ name, description, photo, selectedUsers }) => {
     const selectedUserIds = selectedUsers.map((user) => user.id);
-
-    if (createMode === 'chat') {
-      sendWsAction('create_chat', {
-        userId: selectedUserIds.length === 1 ? selectedUserIds[0] : undefined,
+    
+    sendWsAction('create_chat', {
+        type: createMode == "chat" ? CHAT_TYPE_GROUP : CHAT_TYPE_CHANNEL,
         title: name,
-        description,
+        desc: description,
         avatar: photo,
-        member_ids: selectedUserIds,
-        members: selectedUsers,
+        member: selectedUserIds,
       });
-    }
-
-    if (createMode === 'channel') {
-      sendWsAction('create_channel', {
-        title: name,
-        description,
-        avatar: photo,
-        member_ids: selectedUserIds,
-        members: selectedUsers,
-      });
-    }
 
     setCreateMode(null);
     closePanel();

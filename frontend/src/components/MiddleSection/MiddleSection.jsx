@@ -5,6 +5,11 @@ import { useEffect, useState } from 'react';
 import { setSearchResults, removeSearchResult } from '../../store/slices/chatSlice';
 import ChatContextMenu from './ChatContextMenu';
 
+const CHAT_TYPE_PRIVATE = 0;
+const CHAT_TYPE_GROUP = 1;
+const CHAT_TYPE_CHANNEL = 2;
+
+
 const MiddleSection = ({ updateChatClick }) => {  
   const [searchText, setSearchText] = useState('');
   const [contextMenu, setContextMenu] = useState(null);
@@ -38,7 +43,10 @@ const MiddleSection = ({ updateChatClick }) => {
     
     ws.send(JSON.stringify({
       type: "search",
-      payload: { userId: user.userId, query: query },
+      payload: { 
+        userId: user.userId, 
+        query: query 
+      },
     }));
   };
 
@@ -51,7 +59,10 @@ const MiddleSection = ({ updateChatClick }) => {
     
     ws.send(JSON.stringify({
       type: "create_chat",
-      payload: { userId: user.user_id }
+      payload: { 
+        type: CHAT_TYPE_PRIVATE,
+        users: [user.user_id] 
+      }
     }));
 
   };

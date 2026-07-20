@@ -23,7 +23,7 @@ func NewWsRouter(api *API) WsRouter {
 		handlers: map[string]WSHandlerFunc{
 			"search":                api.SearchUsersHandler,
 			"new_message":           api.AddMessageHandler,
-			"create_chat":           api.CreatePrivateChatHandler,
+			"create_chat":           api.CreateChatHandler,
 			"create_folder":         api.CreateFolderHandler,
 			"edit_profile":          api.EditProfileHandler,
 			"edit_chat_name":        api.EditChatNameHandler,

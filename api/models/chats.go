@@ -26,12 +26,12 @@ var (
 )
 
 type Chat struct {
-	ChatID        int            `json:"chat_id"`
-	Type          int            `json:"type"`
-	Title         string         `json:"title"`
-	Description   sql.NullString `json:"description"`
-	AvatarID      sql.NullInt64  `json:"avatar_link"`
-	CreatorID     int            `json:"creator_id"`
-	CreatedAt     time.Time      `json:"created_at"`
-	SearchPrivacy sql.NullBool   `json:"search_privacy"`
+	ChatID        int            `json:"chat_id" db:"chat_id"`
+	Type          int            `json:"type" db:"type"`
+	Title         string         `json:"title" db:"title"`
+	Description   sql.NullString `json:"description" db:"description"`
+	AvatarID      sql.NullInt64  `json:"avatar_id" db:"avatar_id"`
+	CreatorID     int            `json:"creator_id" db:"creator_id"`
+	CreatedAt     time.Time      `json:"created_at" db:"created_at"`
+	SearchPrivacy sql.NullBool   `json:"search_privacy" db:"search_privacy"`
 }

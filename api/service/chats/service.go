@@ -3,6 +3,7 @@ package chats
 import (
 	"api/models"
 	"database/sql"
+	"errors"
 )
 
 type Storage interface {
@@ -87,7 +88,18 @@ func (cs *ChatService) CreatePrivateChat(userID1, userID2 int) (*models.Chat, []
 }
 
 func (cs *ChatService) CreateChat(typeID int, title, description string, mediaID sql.NullInt64, members []int, creatorID int) (*models.Chat, error) {
-	chat, err := cs.Storage.CreateChat(typeID, title, description, mediaID, creatorID)
+	var chat *models.Chat
+	var err error
+
+	if typeID == models.PrivateChat {
+		if len(members) != 1 {
+			return nil, errors.New("internal error: invalid private chat args")
+		}
+		chat, err = cs.Storage.CreatePrivateChat(creatorID, members[0])
+	} else {
+		chat, err = cs.Storage.CreateChat(typeID, title, description, mediaID, creatorID)
+	}
+
 	if err != nil {
 		return nil, err
 	}

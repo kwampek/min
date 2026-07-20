@@ -27,7 +27,7 @@ CREATE TABLE IF NOT EXISTS Messenger.Users (
 CREATE TABLE IF NOT EXISTS Messenger.Chats (
     chat_id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     type SMALLINT NOT NULL,
-    title VARCHAR(32) NOT NULL,
+    title VARCHAR(32),
     description TEXT,
     avatar_id INTEGER DEFAULT NULL,
     creator_id INTEGER NOT NULL,

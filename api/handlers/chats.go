@@ -8,7 +8,11 @@ import (
 )
 
 type WSCreatePayload struct {
-	UserId int `json:"userId"`
+	Type        int             `json:"type"`
+	Title       string          `json:"title"`
+	Description string          `json:"desc"`
+	Avatar      WSAvatarPayload `json:"avatar"`
+	Users       []int           `json:"users"`
 }
 
 type WSAvatarPayload struct {
@@ -18,30 +22,6 @@ type WSAvatarPayload struct {
 	Data string `json:"data"`
 }
 
-type WSCreateChatGroupPayload struct {
-	Type        int             `json:"type"`
-	Title       string          `json:"title"`
-	Description string          `json:"desc"`
-	Avatar      WSAvatarPayload `json:"avatar"`
-	Users       []int           `json:"users"`
-}
-
-func (a *API) createPrivateChatHandler(userID1, userID2 int) error {
-	chat, members, err := a.ChatService.CreatePrivateChat(userID1, userID2)
-	if err != nil {
-		return err
-	}
-
-	return a.WsService.BroadcastToUsers(
-		members,
-		-1,
-		map[string]any{
-			"type":    "create_chat",
-			"payload": chat,
-		},
-	)
-}
-
 func (a *API) createChatHandler(typeID int, title, description string, avatarID sql.NullInt64, creatorID int, members []int) error {
 	chat, err := a.ChatService.CreateChat(typeID, title, description, avatarID, members, creatorID)
 	if err != nil {
@@ -49,6 +29,8 @@ func (a *API) createChatHandler(typeID int, title, description string, avatarID 
 	}
 
 	// TODO clear -1 here
+	// sobad
+	members = append(members, creatorID)
 
 	return a.WsService.BroadcastToUsers(
 		members,
@@ -60,19 +42,8 @@ func (a *API) createChatHandler(typeID int, title, description string, avatarID 
 	)
 }
 
-func (a *API) CreatePrivateChatHandler(ID models.Identifier, payload json.RawMessage) error {
-	var createPayload WSCreatePayload
-
-	if err := json.Unmarshal(payload, &createPayload); err != nil {
-		log.Println("create_chat parse error:", err)
-		return err
-	}
-
-	return a.createPrivateChatHandler(ID.UserID, createPayload.UserId)
-}
-
 func (a *API) CreateChatHandler(ID models.Identifier, payload json.RawMessage) error {
-	var createCGPayload WSCreateChatGroupPayload
+	var createCGPayload WSCreatePayload
 
 	if err := json.Unmarshal(payload, &createCGPayload); err != nil {
 		log.Println("create_chat parse error:", err)

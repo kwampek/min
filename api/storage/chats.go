@@ -37,17 +37,18 @@ func (s *Storage) CreateChat(typeID int, title, description string, avatarID sql
 		)
 		RETURNING
 			chat_id,
+			type,
 			title,
 			description,
 			avatar_id,
-			type,
 			creator_id,
 			created_at
 	`, typeID, title, description, avatarID, creatorID).Scan(
 		&chat.ChatID,
+		&chat.Type,
 		&chat.Title,
 		&chat.Description,
-		&chat.Type,
+		&chat.AvatarID,
 		&chat.CreatorID,
 		&chat.CreatedAt,
 	)
