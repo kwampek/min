@@ -1,20 +1,42 @@
 package handlers
 
 import (
+	"api/models"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"log"
 	"net/http"
+
+	"github.com/gorilla/websocket"
 )
 
-type WSAddMessagePayload struct {
-	ChatID       int    `json:"chat_id"`
-	ChatMemberId int    `json:"from_chat_member_id"`
-	Text         string `json:"text"`
-	Media        string `json:"media"`
+type WSHandlerFunc func(id models.Identifier, payload json.RawMessage) error
+
+type WsRouter struct {
+	handlers map[string]WSHandlerFunc
 }
 
-type WSSearchPayload struct {
-	Text string `json:"query"`
+func NewWsRouter(api *API) WsRouter {
+
+	return WsRouter{
+		handlers: map[string]WSHandlerFunc{
+			"search":                api.SearchUsersHandler,
+			"new_message":           api.AddMessageHandler,
+			"create_chat":           api.CreateChatHandler,
+			"create_folder":         api.CreateFolderHandler,
+			"edit_profile":          api.EditProfileHandler,
+			"edit_chat_name":        api.EditChatNameHandler,
+			"edit_folder_name":      api.EditFolderNameHandler,
+			"toggle_chat_in_folder": api.ToggleChatInFolderHandler,
+			"logout":                api.LogoutHandler,
+		},
+	}
+}
+
+func (r *WsRouter) Get(name string) (WSHandlerFunc, bool) {
+	handler, ok := r.handlers[name]
+	return handler, ok
 }
 
 type WSMessageWrapper struct {
@@ -22,238 +44,72 @@ type WSMessageWrapper struct {
 	Payload json.RawMessage `json:"payload"`
 }
 
-type WSCreatePayload struct {
-	UserId int `json:"userId"`
-}
-
-type WSCreateFolderPayload struct {
-	Name string `json:"folder_name"`
-}
-
-type WSEditFolderNamePayload struct {
-	PrevName string `json:"prev_name"`
-	NewName  string `json:"new_name"`
-}
-
-type WSAddChatToFolderPayload struct {
-	ChatId     int    `json:"chat_id"`
-	Foldername string `json:"folder_name"`
-}
-
-type WSRemoveChatFromFolderPayload struct {
-	ChatId     int    `json:"chat_id"`
-	Foldername string `json:"folder_name"`
-}
-
-type WSToggleChatInFolderPayload struct {
-	ChatId     int    `json:"chat_id"`
-	Foldername string `json:"folder_name"`
-	IsChecked  bool   `json:"is_checked"`
-}
-
-type WSEditChatNamePayload struct {
-	ChatId  int    `json:"chat_id"`
-	NewName string `json:"new_name"`
-}
-
-type WSEditProfilePayload struct {
-	Login       string `json:"login"`
-	Email       string `json:"email"`
-	PhoneNumber string `json:"phone_number"`
-	Birthday    string `json:"birthday"`
-	Sex         string `json:"sex"`
-}
-
-func (A *API) wsHandler(w http.ResponseWriter, r *http.Request) {
-	tokenString := r.URL.Query().Get("token")
-	if tokenString == "" {
-		http.Error(w, "missing token", http.StatusUnauthorized)
-		return
+func (a *API) authenticateWS(r *http.Request) (models.Identifier, error) {
+	token := r.URL.Query().Get("token")
+	if token == "" {
+		return models.Identifier{}, errors.New("missing token")
 	}
 
-	claims, err := A.AuthService.Jwt.ValidateToken(tokenString)
-	if err != nil {
-		http.Error(w, "invalid token: "+err.Error(), http.StatusUnauthorized)
-		return
-	}
+	fmt.Println("AUTH TRY: ", token)
+	return a.AuthService.ValidateSession(token)
+}
 
-	exists, err := A.AuthService.Storage.IsTokenExists(tokenString)
-	if err != nil {
-		http.Error(w, "internal error", http.StatusInternalServerError)
-		return
-	}
-	if !exists {
-		http.Error(w, "token revoked", http.StatusUnauthorized)
-		return
-	}
-
-	userID := claims.UserID
-
-	// TODO
-
-	conn, err := A.Upgrader.Upgrade(w, r, nil)
-	if err != nil {
-		log.Println("WS upgrade error:", err)
-		return
-	}
-
-	A.WsClients.Lock()
-	A.WsClients.Conns[userID] = conn
-	A.WsClients.Unlock()
-
-	allMessages, err := A.loadAllMessages(userID)
+func (A *API) sendInitialState(ID models.Identifier, conn *websocket.Conn) error {
+	allMessages, err := A.MessageService.LoadAllMessages(ID.UserID)
 	if err != nil {
 		log.Println("load messages error:", err)
-		conn.WriteJSON(map[string]interface{}{
+		_ = A.WsService.FastSend(conn, map[string]interface{}{
 			"type":  "error",
 			"error": "failed to load messages",
 		})
-		return
+		return err
 	}
 
-	conn.WriteJSON(map[string]interface{}{
+	return A.WsService.FastSend(conn, map[string]interface{}{
 		"type":          "initial_state",
 		"initial_state": allMessages,
 	})
-
-	go func() {
-		defer func() {
-			A.WsClients.Lock()
-			delete(A.WsClients.Conns, userID)
-			A.WsClients.Unlock()
-			conn.Close()
-			log.Println("WS disconnected:", userID)
-		}()
-
-		for {
-			_, p, err := conn.ReadMessage()
-			if err != nil {
-				// TODO here must be reconnect
-				log.Println("WS read error:", err)
-				return
-			}
-
-			log.Println("Raw WS message:", string(p))
-
-			var wrapper WSMessageWrapper
-			if err := json.Unmarshal(p, &wrapper); err != nil {
-				log.Println("JSON parse error:", err)
-				return
-			}
-
-			switch wrapper.Type {
-
-			case "new_message":
-				var msg WSAddMessagePayload
-				if err := json.Unmarshal(wrapper.Payload, &msg); err != nil {
-					log.Println("new_message parse error:", err)
-					continue
-				}
-				A.addMessageHandler(userID, msg)
-
-			case "search":
-				log.Println("Nu pozya")
-
-				var payload WSSearchPayload
-				if err := json.Unmarshal(wrapper.Payload, &payload); err != nil {
-					log.Println("search payload parse error:", err)
-					continue
-				}
-				A.searchUsersHandler(userID, payload.Text)
-
-			case "create_chat":
-				var createPayload WSCreatePayload
-
-				if err := json.Unmarshal(wrapper.Payload, &createPayload); err != nil {
-					log.Println("create_chat parse error:", err)
-					continue
-				}
-
-				A.createPrivateChatHandler(userID, createPayload.UserId)
-
-			case "create_folder":
-				var createFolderPayload WSCreateFolderPayload
-
-				if err := json.Unmarshal(wrapper.Payload, &createFolderPayload); err != nil {
-					log.Println("create folder parse error: ", err)
-					continue
-				}
-
-				A.createFolderHandler(userId, createFolderPayload.Name)
-
-			case "add_chat_to_folder":
-				var AddChatToFolderPayload WSAddChatToFolderPayload
-
-				if err := json.Unmarshal(wrapper.Payload, &AddChatToFolderPayload); err != nil {
-					log.Println("create folder parse error: ", err)
-					continue
-				}
-
-				A.addChatToFolderHandler(userId, AddChatToFolderPayload.ChatId, AddChatToFolderPayload.Foldername)
-
-			case "remove_chat_from_folder":
-				var RemoveChatFromFolderPayload WSRemoveChatFromFolderPayload
-
-				if err := json.Unmarshal(wrapper.Payload, &RemoveChatFromFolderPayload); err != nil {
-					log.Println("remove chat from folder parse error: ", err)
-					continue
-				}
-
-				A.removeChatFromFolderHandler(userId, RemoveChatFromFolderPayload.ChatId, RemoveChatFromFolderPayload.Foldername)
-
-			case "toggle_chat_in_folder":
-				var ToggleChatInFolderPayload WSToggleChatInFolderPayload
-
-				if err := json.Unmarshal(wrapper.Payload, &ToggleChatInFolderPayload); err != nil {
-					log.Println("toggle chat in folder parse error: ", err)
-					continue
-				}
-
-				if ToggleChatInFolderPayload.IsChecked {
-					A.addChatToFolderHandler(userId, ToggleChatInFolderPayload.ChatId, ToggleChatInFolderPayload.Foldername)
-				} else {
-					A.removeChatFromFolderHandler(userId, ToggleChatInFolderPayload.ChatId, ToggleChatInFolderPayload.Foldername)
-				}
-
-			case "edit_chat_name":
-				var editChatNamePayload WSEditChatNamePayload
-
-				if err := json.Unmarshal(wrapper.Payload, &editChatNamePayload); err != nil {
-					log.Println("create folder parse error: ", err)
-					continue
-				}
-
-				A.editChatNameHandler(editChatNamePayload.ChatId, editChatNamePayload.NewName)
-
-			case "edit_folder_name":
-
-				var editFolderNamePayload WSEditFolderNamePayload
-
-				if err := json.Unmarshal(wrapper.Payload, &editFolderNamePayload); err != nil {
-					log.Println("create folder parse error: ", err)
-					continue
-				}
-
-				A.editFolderNameHandler(userId, editFolderNamePayload.PrevName, editFolderNamePayload.NewName)
-
-			case "edit_profile":
-
-				var payload map[string]string
-
-				if err := json.Unmarshal(wrapper.Payload, &payload); err != nil {
-					log.Println("create folder parse error: ", err)
-					continue
-				}
-
-				A.editProfileHandler(payload)
-
-			default:
-				log.Println("Unknown WS message type:", wrapper.Type)
-			}
-		}
-	}()
 }
 
 func (A *API) WsHandler(w http.ResponseWriter, r *http.Request) {
-	A.wsHandler(w, r)
+	ID, err := A.authenticateWS(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
+
+	conn, err := A.WsService.Upgrade(w, r)
+	if err != nil {
+		return
+	}
+
+	A.WsService.AddClient(ID, conn)
+	defer A.WsService.RemoveConnection(ID)
+
+	if err := A.sendInitialState(ID, conn); err != nil {
+		return
+	}
+
+	for {
+
+		_, data, err := conn.ReadMessage()
+		if err != nil {
+			return
+		}
+
+		var msg WSMessageWrapper
+
+		if err := json.Unmarshal(data, &msg); err != nil {
+			continue
+		}
+
+		handler, ok := A.WsRouter.Get(msg.Type)
+		if !ok {
+			continue
+		}
+
+		if err := handler(ID, msg.Payload); err != nil {
+			log.Println(err)
+		}
+	}
 }

@@ -42,7 +42,7 @@ func main() {
 	http.Handle("/api/register", handlers.EnableCors(http.HandlerFunc(API.RegisterHandler)))
 	http.Handle("/api/login", handlers.EnableCors(http.HandlerFunc(API.LoginHandler)))
 
-	http.Handle("/api/load_all_messages", handlers.EnableCors(http.HandlerFunc(API.LoadAllMessagesHandler)))
+	//http.Handle("/api/load_all_messages", handlers.EnableCors(http.HandlerFunc(API.LoadAllMessagesHandler)))
 	http.Handle("/ws", handlers.EnableCors(http.HandlerFunc(API.WsHandler)))
 
 	log.Println("API running on :8080")

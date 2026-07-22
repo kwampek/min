@@ -1,11 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { useNavigate } from 'react-router-dom';
-import { setActiveFolder, addFolder, editFolderName } from '../store/slices/chatSlice';
-import { getWebSocket } from '../modules/ws';
+import { setActiveFolder, addFolder, editFolderName } from '../../store/slices/chatSlice';
+import { getWebSocket } from '../../modules/ws';
 
-const LeftSidebar = () => {
-  const rerouting = useNavigate();
+const LeftSidebar = ({ isLeftPanelOpen, setLeftPanelOpen}) => {
   const dispatch = useDispatch();
 
   const { folders, activeFolderName} = useSelector((state) => state.chats);
@@ -104,6 +102,8 @@ const LeftSidebar = () => {
       }));
     }
   };
+  
+  // TODO fix img
 
   return (
     <div className="left-sidebar">
@@ -146,8 +146,8 @@ const LeftSidebar = () => {
         <div className="add-button">+</div>
       </button>
 
-      <div className="profile" onClick={ () => rerouting("/settings/safety")} >
-        <img src="icons/me.jpg" />
+      <div className="profile" onClick={() => setLeftPanelOpen(!isLeftPanelOpen)}>
+        <img src="icons/me.jpg" />  
       </div>
     </div>
   );
