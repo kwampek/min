@@ -1,24 +1,30 @@
 import { useDispatch, useSelector } from 'react-redux';
-import LeftSidebar from '../components/LeftSidebar';
+import LeftSidebar from '../components/LeftSidebar/LeftSidebar';
+import LeftPanel from '../components/LeftPanel/LeftPanel';
 import MiddleSection from '../components/MiddleSection/MiddleSection';
 import RightSection from '../components/RightSection/RightSection';
 import '../assets/styles/main_style.css';
 import { setActiveChat, addMessage } from '../store/slices/chatSlice';
 import { getWebSocket, initWebSocket } from '../modules/ws';
-import { useEffect } from 'react';
-
+import { useEffect, useState } from 'react';
+import { useNavigate } from "react-router-dom";
 
 const App = () => {
+  const navigate = useNavigate();
   const dispatch = useDispatch();
   const { activeChat } = useSelector((state) => state.chats);
   const { userId } = useSelector((state) => state.user)
 
+  const [isLeftPanelOpen, setLeftPanelOpen] = useState(false);
+
+  const closePanel = () => setLeftPanelOpen(false);
+
 
   useEffect(() => {
-    if (userId) {
-      initWebSocket(userId);
-    }
-  }, [userId]);
+      initWebSocket({
+          onUnauthorized: () => navigate("/login"),
+      });
+  }, [navigate]);
 
 
   const ws = getWebSocket();
@@ -52,7 +58,17 @@ const App = () => {
 
   return (
     <div className="container">
-      <LeftSidebar/>
+      <LeftSidebar
+        isLeftPanelOpen={isLeftPanelOpen}
+        setLeftPanelOpen={setLeftPanelOpen}
+      />
+
+      {isLeftPanelOpen && (
+          <LeftPanel
+              closePanel={closePanel}
+          />
+      )}
+
       <div className="resize-bar-left"></div>
       <MiddleSection activeChatId={activeChat} updateChatClick={updateChatClick} />
       <RightSection date={date} handleAddMessage={handleAddMessage}/>

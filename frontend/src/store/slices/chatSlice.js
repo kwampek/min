@@ -145,7 +145,7 @@ export const normalizeChats = (data) => {
       chats[chat.chat_id] = {
         chat_member_id: chat.chat_member_id,
         chat_id: chat.chat_id,
-        name: chat.name,
+        title: chat.title,
         avatar: chat.avatar.String,
         unread: chat.unread || 0
       };

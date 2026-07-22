@@ -3,6 +3,7 @@ package storage
 import (
 	"api/models"
 	"database/sql"
+	"errors"
 )
 
 func (s *Storage) GetFolders(userID int) (map[int]string, error) {
@@ -40,20 +41,55 @@ func (s *Storage) GetUserChats(userID int) ([]models.ChatsByFolder, error) {
 				m.message_text,
 				m.send_time
 			FROM Messenger.ChatMembers cm
-			LEFT JOIN Messenger.Messages m
-				ON m.from_chat_member_id = cm.chat_member_id
+			JOIN Messenger.Messages m
+			ON m.from_chat_member_id = cm.chat_member_id
 			ORDER BY cm.chat_id, m.send_time DESC
 		)
+
+		-- групповые
 		SELECT
 			c.chat_id,
+			c.type,
 			c.title,
-			c.avatar_link,
-			cml.chat_member_id,
-			COALESCE(lm.message_text, '')
-		FROM Messenger.ChatMembers cml
-		JOIN Messenger.Chats c ON c.chat_id = cml.chat_id
-		LEFT JOIN last_msg lm ON lm.chat_id = c.chat_id
-		WHERE cml.user_id = $1
+			mf.file_url,
+			me.chat_member_id,
+			lm.message_text
+		FROM Messenger.ChatMembers me
+		JOIN Messenger.Chats c
+			ON c.chat_id = me.chat_id
+		LEFT JOIN Messenger.MediaFiles mf
+			ON mf.media_id = c.avatar_id
+		LEFT JOIN last_msg lm
+			ON lm.chat_id = c.chat_id
+		WHERE me.user_id = $1
+		AND c.type <> 0
+
+		UNION ALL
+
+		-- приватные
+		SELECT
+			c.chat_id,
+			c.type,
+			COALESCE(other.custom_title, u.login),
+			mf.file_url,
+			me.chat_member_id,
+			lm.message_text
+		FROM Messenger.ChatMembers me
+		JOIN Messenger.Chats c
+			ON c.chat_id = me.chat_id
+		JOIN Messenger.ChatMembers other
+			ON other.chat_id = c.chat_id
+		AND other.user_id <> me.user_id
+		JOIN Messenger.Users u
+			ON u.user_id = other.user_id
+		LEFT JOIN Messenger.MediaFiles mf
+			ON mf.media_id = u.avatar_id
+		LEFT JOIN last_msg lm
+			ON lm.chat_id = c.chat_id
+		WHERE me.user_id = $1
+		AND c.type = 0
+
+		ORDER BY 6 DESC NULLS LAST;
 	`, userID)
 
 	if err != nil {
@@ -68,7 +104,8 @@ func (s *Storage) GetUserChats(userID int) ([]models.ChatsByFolder, error) {
 
 		if err := rows.Scan(
 			&chat.ChatID,
-			&chat.Name,
+			&chat.Type,
+			&chat.Title,
 			&chat.AvatarLink,
 			&chat.ChatMemberId,
 			&chat.LastMessage,
@@ -189,6 +226,9 @@ func (s *Storage) AddMessage(text string, userID int, chatID int, mediaID sql.Nu
 		mediaID,
 	).Scan(&messageID, &chatMemberID)
 
-	// TODO
+	if err == sql.ErrNoRows {
+		return 0, 0, errors.New("user is not member of chat")
+	}
+
 	return
 }

@@ -1,7 +1,9 @@
 package handlers
 
 import (
+	"api/models"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -9,7 +11,7 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-type WSHandlerFunc func(userID int, payload json.RawMessage) error
+type WSHandlerFunc func(id models.Identifier, payload json.RawMessage) error
 
 type WsRouter struct {
 	handlers map[string]WSHandlerFunc
@@ -21,12 +23,13 @@ func NewWsRouter(api *API) WsRouter {
 		handlers: map[string]WSHandlerFunc{
 			"search":                api.SearchUsersHandler,
 			"new_message":           api.AddMessageHandler,
-			"create_chat":           api.CreatePrivateChatHandler,
+			"create_chat":           api.CreateChatHandler,
 			"create_folder":         api.CreateFolderHandler,
 			"edit_profile":          api.EditProfileHandler,
 			"edit_chat_name":        api.EditChatNameHandler,
 			"edit_folder_name":      api.EditFolderNameHandler,
 			"toggle_chat_in_folder": api.ToggleChatInFolderHandler,
+			"logout":                api.LogoutHandler,
 		},
 	}
 }
@@ -41,32 +44,18 @@ type WSMessageWrapper struct {
 	Payload json.RawMessage `json:"payload"`
 }
 
-func (A *API) authenticateWS(r *http.Request) (int, error) {
-	tokenString := r.URL.Query().Get("token")
-	if tokenString == "" {
-		return 0, fmt.Errorf("missing token")
+func (a *API) authenticateWS(r *http.Request) (models.Identifier, error) {
+	token := r.URL.Query().Get("token")
+	if token == "" {
+		return models.Identifier{}, errors.New("missing token")
 	}
 
-	claims, err := A.AuthService.Jwt.ValidateToken(tokenString)
-	if err != nil {
-		return 0, err
-	}
-
-	exists, err := A.AuthService.Storage.IsTokenExists(tokenString)
-	if err != nil {
-		return 0, err
-	}
-
-	if !exists {
-		return 0, fmt.Errorf("token revoked")
-	}
-
-	// may be better to send full claims
-	return claims.UserID, nil
+	fmt.Println("AUTH TRY: ", token)
+	return a.AuthService.ValidateSession(token)
 }
 
-func (A *API) sendInitialState(userID int, conn *websocket.Conn) error {
-	allMessages, err := A.MessageService.LoadAllMessages(userID)
+func (A *API) sendInitialState(ID models.Identifier, conn *websocket.Conn) error {
+	allMessages, err := A.MessageService.LoadAllMessages(ID.UserID)
 	if err != nil {
 		log.Println("load messages error:", err)
 		_ = A.WsService.FastSend(conn, map[string]interface{}{
@@ -83,7 +72,7 @@ func (A *API) sendInitialState(userID int, conn *websocket.Conn) error {
 }
 
 func (A *API) WsHandler(w http.ResponseWriter, r *http.Request) {
-	userID, err := A.authenticateWS(r)
+	ID, err := A.authenticateWS(r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
@@ -94,10 +83,10 @@ func (A *API) WsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	A.WsService.AddClient(userID, conn)
-	defer A.WsService.RemoveClient(userID)
+	A.WsService.AddClient(ID, conn)
+	defer A.WsService.RemoveConnection(ID)
 
-	if err := A.sendInitialState(userID, conn); err != nil {
+	if err := A.sendInitialState(ID, conn); err != nil {
 		return
 	}
 
@@ -119,7 +108,7 @@ func (A *API) WsHandler(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 
-		if err := handler(userID, msg.Payload); err != nil {
+		if err := handler(ID, msg.Payload); err != nil {
 			log.Println(err)
 		}
 	}

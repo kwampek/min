@@ -1,3 +1,4 @@
+import { useNavigate } from "react-router-dom";
 import store from "../store/index.js";
 import { setChats, addMessage, normalizeChats, setSearchResults, addNewChat } from '../store/slices/chatSlice';
 
@@ -25,9 +26,7 @@ function connectWS() {
   return new WebSocket(`${WS_URL}?token=${encodeURIComponent(token)}`);
 }
 
-
-
-export function initWebSocket() {
+export function initWebSocket({ onUnauthorized }) {
   if (socket) return socket;
   socket = connectWS();
   if (!socket) {
@@ -35,10 +34,36 @@ export function initWebSocket() {
     return;
   }
 
-  socket.onopen = () => console.log("WS CONNECTED");
-  socket.onclose = () => console.log("WS CLOSED");
-  socket.onerror = (e) => console.log("WS ERROR", e);
+  socket.onopen = () => {
+    console.log("WS CONNECTED");
+  };
+  
+  socket.onclose = (event) => {
+      console.log("WS CLOSED");
 
+      socket = null;
+
+      if (event.code === 4001) {
+          onUnauthorized?.();
+      }
+  };
+
+  socket.onerror = (e) => {
+    // TODO
+    // theoretically there won't be errors errors during ws send 
+    // server catches all errors and revokes connection
+
+    console.log("WS ERROR", e);
+
+    socket = null;
+
+    if (event.code === 4001) {
+        onUnauthorized?.();
+    }
+  };
+
+
+  // better to greedy add objects and confirm them with ws msges
   
   socket.onmessage = (event) => {
     try {
@@ -90,6 +115,7 @@ export function initWebSocket() {
 
     } catch (err) {
         console.error("WS parse error:", err);
+        // TODO may be need to return here
     }
   };
 

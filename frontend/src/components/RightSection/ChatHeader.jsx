@@ -12,7 +12,7 @@ const ChatHeader = ( {activeChat} ) => {
             <GetAvatar chat={activeChat}/>
 
             <div className="info">
-                <span className="name">{activeChat.name}</span>
+                <span className="name">{activeChat.title}</span>
             </div>
             </div>
             <div className="actions">

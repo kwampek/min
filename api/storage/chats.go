@@ -2,6 +2,7 @@ package storage
 
 import (
 	"api/models"
+	"database/sql"
 )
 
 func (s *Storage) UpdateChatTitle(chatID int, title string) error {
@@ -14,32 +15,40 @@ func (s *Storage) UpdateChatTitle(chatID int, title string) error {
 	return err
 }
 
-func (s *Storage) CreateChat(title string, creatorID int, typeID int) (*models.Chat, error) {
+func (s *Storage) CreateChat(typeID int, title, description string, avatarID sql.NullInt64, creatorID int) (*models.Chat, error) {
 	var chat models.Chat
 
 	err := s.DB.QueryRow(`
 		INSERT INTO Messenger.Chats (
 			type,
 			title,
+			description,
+			avatar_id,
 			created_at,
 			creator_id
 		)
 		VALUES (
 			$1,
-			$2
+			$2,
+			$3,
+			$4,
 			NOW(),
-			$3
+			$5
 		)
 		RETURNING
 			chat_id,
-			title,
 			type,
+			title,
+			description,
+			avatar_id,
 			creator_id,
 			created_at
-	`, typeID, title, creatorID).Scan(
+	`, typeID, title, description, avatarID, creatorID).Scan(
 		&chat.ChatID,
-		&chat.Title,
 		&chat.Type,
+		&chat.Title,
+		&chat.Description,
+		&chat.AvatarID,
 		&chat.CreatorID,
 		&chat.CreatedAt,
 	)
@@ -85,6 +94,39 @@ func (s *Storage) CreatePrivateChat(userID1, userID2 int) (*models.Chat, error) 
 		&chat.Type,
 		&chat.CreatorID,
 		&chat.CreatedAt,
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &chat, nil
+}
+
+func (s *Storage) GetByID(chatID int) (*models.Chat, error) {
+	var chat models.Chat
+
+	err := s.DB.QueryRow(`
+		SELECT
+			chat_id,
+			type,
+			title,
+			description,
+			avatar_id,
+			creator_id,
+			created_at,
+			search_privacy
+		FROM Messenger.Chats
+		WHERE chat_id = $1
+	`, chatID).Scan(
+		&chat.ChatID,
+		&chat.Type,
+		&chat.Title,
+		&chat.Description,
+		&chat.AvatarID,
+		&chat.CreatorID,
+		&chat.CreatedAt,
+		&chat.SearchPrivacy,
 	)
 
 	if err != nil {

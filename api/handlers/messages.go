@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"api/models"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -71,7 +72,7 @@ func (A *API) addMessageHandler(userID int, reqPayload WSAddMessagePayload) erro
 		"message": message,
 	}
 
-	users, err := A.ChatService.GetChatMembersIds(reqPayload.ChatID)
+	users, err := A.ChatService.GetChatMembersIDs(reqPayload.ChatID)
 	if err != nil {
 		return err
 	}
@@ -79,13 +80,13 @@ func (A *API) addMessageHandler(userID int, reqPayload WSAddMessagePayload) erro
 	return A.WsService.BroadcastToUsers(users, userID, payload)
 }
 
-func (A *API) AddMessageHandler(userID int, payload json.RawMessage) error {
+func (A *API) AddMessageHandler(ID models.Identifier, payload json.RawMessage) error {
 	var msg WSAddMessagePayload
 	if err := json.Unmarshal(payload, &msg); err != nil {
 		log.Println("new_message parse error:", err)
 		return err
 	}
-	return A.addMessageHandler(userID, msg)
+	return A.addMessageHandler(ID.UserID, msg)
 }
 
 // func (A *API) broadcastToChat(senderId, chatId int, message Message) error {

@@ -8,7 +8,7 @@ export const GetAvatar = ( {chat} ) => {
   if (!chat.avatar || !chat.avatar.Valid) {
     return (
     <div className="chat-avatar default-avatar">
-      <span className="avatar-letter">{chat.name?.[0] || ''}</span>
+      <span className="avatar-letter">{chat.title?.[0] || ''}</span>
     </div>
     );
   }
@@ -27,7 +27,7 @@ const ChatItem = ({ chat, isActive, onClick, onContextMenu }) => {
 
       <div className="chat-info">
         <div className="chat-top">
-          <div className="chat-name">{chat.name}</div>
+          <div className="chat-name">{chat.title}</div>
           <div className="chat-status">
             <span className="chat-time">{}</span>
           </div>

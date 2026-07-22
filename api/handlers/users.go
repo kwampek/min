@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"api/models"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -10,14 +11,14 @@ type WSSearchPayload struct {
 	Text string `json:"query"`
 }
 
-func (A *API) searchUsers(userID int, query string) error {
-	users, err := A.UserService.SearchUsers(userID, query)
+func (A *API) searchUsers(ID models.Identifier, query string) error {
+	users, err := A.UserService.SearchUsers(ID.UserID, query)
 	if err != nil {
 		return err
 	}
 
 	return A.WsService.Send(
-		userID,
+		ID,
 		map[string]any{
 			"type": "search",
 			"payload": map[string]any{
@@ -28,7 +29,7 @@ func (A *API) searchUsers(userID int, query string) error {
 	)
 }
 
-func (A *API) SearchUsersHandler(userID int, payload json.RawMessage) error {
+func (A *API) SearchUsersHandler(ID models.Identifier, payload json.RawMessage) error {
 	log.Println("Nu pozya")
 
 	var wSSearchPayload WSSearchPayload
@@ -36,7 +37,8 @@ func (A *API) SearchUsersHandler(userID int, payload json.RawMessage) error {
 		log.Println("search payload parse error:", err)
 		return err
 	}
-	return A.searchUsers(userID, wSSearchPayload.Text)
+
+	return A.searchUsers(ID, wSSearchPayload.Text)
 }
 
 func (A *API) EditProfile(payload map[string]string) error {
@@ -62,13 +64,13 @@ func (A *API) EditProfile(payload map[string]string) error {
 		return nil
 	}
 
-	query += fmt.Sprintf(" WHERE user_id=%d", user_id)
+	query += fmt.Sprintf(" WHERE user_id=%s", user_id)
 
 	_, err := A.DB.Exec(query, args)
 	return err
 }
 
-func (A *API) EditProfileHandler(userID int, payload json.RawMessage) error {
+func (A *API) EditProfileHandler(ID models.Identifier, payload json.RawMessage) error {
 	var editProfilePayload map[string]string
 
 	if err := json.Unmarshal(payload, &editProfilePayload); err != nil {

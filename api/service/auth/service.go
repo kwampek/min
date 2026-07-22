@@ -2,51 +2,53 @@ package auth
 
 import (
 	"api/models"
-	"api/service/jwt"
-	"errors"
+	"api/service/tokens"
+	"crypto/sha256"
+	"database/sql"
+	"encoding/hex"
 	"time"
 
 	"golang.org/x/crypto/bcrypt"
 )
 
-type Service struct {
-	Storage   Storage
-	Jwt       *jwt.Service
-	Validator *Validator
+type AuthService struct {
+	Storage      Storage
+	TokenService tokens.TokenService
+	Validator    Validator
 }
 
-func NewService(Storage Storage, JwtService *jwt.Service) Service {
-	return Service{
-		Storage:   Storage,
-		Jwt:       JwtService,
-		Validator: NewValidator(),
+func NewAuthService(Storage Storage, TokenService tokens.TokenService) AuthService {
+	return AuthService{
+		Storage:      Storage,
+		TokenService: TokenService,
+		Validator:    NewValidator(),
 	}
 }
 
-func (s *Service) Register(req RegisterRequest) (*AuthResponse, error) {
-	if err := s.Validator.ValidateLogin(req.Login); err != nil {
-		return nil, err
-	}
-	if err := s.Validator.ValidatePassword(req.Password); err != nil {
-		return nil, err
-	}
-	if err := s.Validator.ValidateEmail(req.Email); err != nil {
+func hashToken(token string) string {
+	hash := sha256.Sum256([]byte(token))
+	return hex.EncodeToString(hash[:])
+}
+
+func (s *AuthService) Register(req RegisterRequest, device models.Device) (*AuthResponse, error) {
+	if err := s.Validator.ValidateRegister(req); err != nil {
 		return nil, err
 	}
 
-	existing, _ := s.Storage.GetUserByLogin(req.Login)
-	if existing != nil {
+	_, err := s.Storage.GetUserByLogin(req.Login)
+	if err != sql.ErrNoRows {
 		return nil, ErrUserAlreadyExists
 	}
 
-	hash, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+	hashPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 	if err != nil {
 		return nil, err
 	}
 
-	user := &models.User{
+	user := models.User{
 		Login:        req.Login,
-		PasswordHash: string(hash),
+		PasswordHash: string(hashPassword),
+		PhoneNumber:  req.PhoneNumber,
 		Email:        req.Email,
 		CreatedAt:    time.Now(),
 	}
@@ -56,16 +58,23 @@ func (s *Service) Register(req RegisterRequest) (*AuthResponse, error) {
 		return nil, err
 	}
 
-	token, err := s.Jwt.GenerateToken(userID, req.Login)
+	token, err := s.TokenService.GenerateToken()
 	if err != nil {
 		return nil, err
 	}
 
-	expiresAt := time.Now().Add(24 * time.Hour)
-	if err := s.Storage.SaveToken(userID, token, expiresAt); err != nil {
+	err = s.Storage.CreateSession(models.Session{
+		UserID:     userID,
+		TokenHash:  hashToken(token),
+		DeviceName: device.DeviceName,
+		IPAddress:  device.IPAddress,
+		ExpiresAt:  time.Now().Add(30 * 24 * time.Hour),
+	})
+	if err != nil {
 		return nil, err
 	}
 
+	// TODO Redundant info
 	return &AuthResponse{
 		UserID:      userID,
 		Login:       req.Login,
@@ -76,12 +85,11 @@ func (s *Service) Register(req RegisterRequest) (*AuthResponse, error) {
 	}, nil
 }
 
-func (s *Service) Login(req LoginRequest) (*AuthResponse, error) {
-	if err := s.Validator.ValidateLogin(req.Login); err != nil {
+func (s *AuthService) Login(req LoginRequest, device models.Device) (*AuthResponse, error) {
+	// TODO need to be transcation
+
+	if err := s.Validator.Validate(req); err != nil {
 		return nil, err
-	}
-	if len(req.Password) < 1 {
-		return nil, errors.New("password is required")
 	}
 
 	user, err := s.Storage.GetUserByLogin(req.Login)
@@ -89,17 +97,26 @@ func (s *Service) Login(req LoginRequest) (*AuthResponse, error) {
 		return nil, ErrUserNotFound
 	}
 
-	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.Password)); err != nil {
+	if err := bcrypt.CompareHashAndPassword(
+		[]byte(user.PasswordHash),
+		[]byte(req.Password),
+	); err != nil {
 		return nil, ErrInvalidPassword
 	}
 
-	token, err := s.Jwt.GenerateToken(user.UserID, user.Login)
+	token, err := s.TokenService.GenerateToken()
 	if err != nil {
 		return nil, err
 	}
 
-	expiresAt := time.Now().Add(24 * time.Hour)
-	if err := s.Storage.SaveToken(user.UserID, token, expiresAt); err != nil {
+	err = s.Storage.CreateSession(models.Session{
+		UserID:     user.UserID,
+		TokenHash:  hashToken(token),
+		DeviceName: device.DeviceName,
+		IPAddress:  device.IPAddress,
+		ExpiresAt:  time.Now().Add(30 * 24 * time.Hour),
+	})
+	if err != nil {
 		return nil, err
 	}
 
@@ -111,8 +128,4 @@ func (s *Service) Login(req LoginRequest) (*AuthResponse, error) {
 		Token:       token,
 		CreatedAt:   user.CreatedAt,
 	}, nil
-}
-
-func (s *Service) Logout(userID int, token string) error {
-	return s.Storage.DeleteToken(userID, token)
 }
