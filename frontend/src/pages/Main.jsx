@@ -53,9 +53,6 @@ const App = () => {
     dispatch(addMessage({ chat_id: activeChat.chat_id, message}));
   };
 
-
-  const date = '17 декабря'; // okak
-
   return (
     <div className="container">
       <LeftSidebar
@@ -71,7 +68,7 @@ const App = () => {
 
       <div className="resize-bar-left"></div>
       <MiddleSection activeChatId={activeChat} updateChatClick={updateChatClick} />
-      <RightSection date={date} handleAddMessage={handleAddMessage}/>
+      <RightSection handleAddMessage={handleAddMessage}/>
     </div>
   );
 };

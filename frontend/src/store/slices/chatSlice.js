@@ -1,4 +1,4 @@
-import { createSlice } from '@reduxjs/toolkit';
+import { createSlice, createSelector } from '@reduxjs/toolkit';
 
 const initialState = {
   messages: {}, // chat_id: [{ id, chat_id, text, time, mine, media, status }]
@@ -174,3 +174,55 @@ export const normalizeChats = (data) => {
 
   return { messages, chats, folders };
 };
+
+export const selectPreparedMessages = createSelector(
+    [
+        state => state.chats.messages,
+        state => state.chats.activeChat,
+    ],
+    (messagesByChats, activeChat) => {
+        if (!activeChat) return [];
+
+        const messages = messagesByChats[activeChat.chat_id] || [];
+
+        return messages.map((msg, i) => {
+            const prev = messages[i - 1];
+            const next = messages[i + 1];
+
+            const samePrev =
+                prev &&
+                prev.from_chat_member_id === msg.from_chat_member_id;
+
+            const sameNext =
+                next &&
+                next.from_chat_member_id === msg.from_chat_member_id;
+
+            let group;
+
+            if (!samePrev && !sameNext)
+                group = "single";
+            else if (!samePrev)
+                group = "first";
+            else if (!sameNext)
+                group = "last";
+            else
+                group = "middle";
+
+            const showAvatar =
+                group === "single" ||
+                group === "last";
+
+            const showDateDivider =
+                !prev ||
+                new Date(prev.time).toDateString() !==
+                new Date(msg.time).toDateString();
+
+            return {
+                ...msg,
+                group,
+                showAvatar,
+                showDateDivider,
+            };
+        });
+    }
+);

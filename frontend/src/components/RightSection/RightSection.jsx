@@ -3,16 +3,15 @@ import { useState } from "react";
 import ChatHeader from "./ChatHeader";
 import Messages from "./Messages";
 import ChatDialog from "../Dialog/ChatDialog";
+import { selectPreparedMessages } from "../../store/slices/chatSlice";
 
 
-const RightSection = ({ date, handleAddMessage }) => {
+const RightSection = ({ handleAddMessage }) => {
   const [inputValue, setInputValue] = useState('');
   const [editMode, setEditMode] = useState('');  
 
   const activeChat = useSelector((state) => state.chats.activeChat);
-  const messages = useSelector(
-    (state) => (activeChat ? state.chats.messages[activeChat.chat_id] || [] : [])
-  );
+  const messages = useSelector(selectPreparedMessages);
 
   const handleSend = () => {
     if (!inputValue.trim()) return;
@@ -63,10 +62,6 @@ const RightSection = ({ date, handleAddMessage }) => {
           onSubmit={handleEditSubmit}
         />
       )}
-  
-      <div className="date-wrapper">
-        <div className="date">{date}</div>
-      </div>
 
       <Messages messages={messages} />
 
