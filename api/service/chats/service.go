@@ -104,6 +104,9 @@ func (cs *ChatService) CreateChat(typeID int, title, description string, mediaID
 		return nil, err
 	}
 
+	// TODO
+	members = append(members, creatorID)
+
 	_, err = cs.Storage.AddChatMembers(chat.ChatID, members)
 	if err != nil {
 		return nil, err

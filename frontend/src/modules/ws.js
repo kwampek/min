@@ -69,53 +69,53 @@ export function initWebSocket({ onUnauthorized }) {
     try {
         const msg = JSON.parse(event.data);
         if (msg.type === "unauthorized") {
-            localStorage.removeItem("userData");
+          localStorage.removeItem("userData");
         }
 
         switch (msg.type) {
         case "initial_state": {
-            const normalized = normalizeChats(msg.initial_state);
-            store.dispatch(setChats(normalized));
-            break;
+          const normalized = normalizeChats(msg.initial_state);
+          store.dispatch(setChats(normalized));
+          break;
         }
 
         case "new_message": {
-            store.dispatch(
-            addMessage({
-                chat_id: msg.chat_id,
-                message: {
-                id: msg.message.message_id,
-                chat_id: msg.chat_id,
-                text: msg.message.message_text,
-                time: msg.message.send_time,
-                from_chat_member_id: msg.message.from_chat_member_id,
-                mine: false,
-                media: msg.message.media_id || null,
-                status: msg.message.status
-                }
-            })
-            );
-            break;
+          store.dispatch(
+          addMessage({
+              chat_id: msg.chat_id,
+              message: {
+              id: msg.message.message_id,
+              chat_id: msg.chat_id,
+              text: msg.message.message_text,
+              time: msg.message.send_time,
+              from_chat_member_id: msg.message.from_chat_member_id,
+              mine: false,
+              media: msg.message.media_id || null,
+              status: msg.message.status
+              }
+          })
+          );
+          break;
         }
 
         case "search": {
-            store.dispatch(setSearchResults(msg.payload.users));
-            break;
+          store.dispatch(setSearchResults(msg.payload.users));
+          break;
         }
 
         case "create_chat": {
-            store.dispatch(addNewChat(msg.payload))
-            break;
+          store.dispatch(addNewChat(msg.payload))
+          break;
         }
 
         default:
-            break;
+          break;
         }
 
 
     } catch (err) {
-        console.error("WS parse error:", err);
-        // TODO may be need to return here
+      console.error("WS parse error:", err);
+      // TODO may be need to return here
     }
   };
 

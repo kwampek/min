@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useState, useRef } from 'react';
 
 const Messages = ({messages}) => {
     const refNiz = useRef(null);
@@ -6,6 +6,7 @@ const Messages = ({messages}) => {
     useEffect(() => {
       refNiz.current?.scrollIntoView({ behavior: 'smooth' });
     }, [messages]);
+
 
     return (
       <div className="messages">

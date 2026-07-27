@@ -2,10 +2,12 @@ import { useSelector } from "react-redux";
 import { useState } from "react";
 import ChatHeader from "./ChatHeader";
 import Messages from "./Messages";
+import ChatDialog from "../Dialog/ChatDialog";
 
 
 const RightSection = ({ date, handleAddMessage }) => {
   const [inputValue, setInputValue] = useState('');
+  const [editMode, setEditMode] = useState('');  
 
   const activeChat = useSelector((state) => state.chats.activeChat);
   const messages = useSelector(
@@ -30,10 +32,38 @@ const RightSection = ({ date, handleAddMessage }) => {
     );
   }
 
+  const handleEditSubmit = ({ chatId, name, description, photo, addedMembers, removedMembers }) => {
+    
+    // TODO compare with prev values
+    sendWsAction('edit_chat', {
+        chat_id: chatId,
+        title: name,
+        desc: description,
+        avatar: photo,
+        added_memeber_ids: addedMembers,
+        removed_member_ids: removedMembers,
+      });
+
+    setCreateMode(null);
+    closePanel();
+  };
+
   return (
     <div className="right-section">
-      <ChatHeader activeChat={activeChat}/>
+      <ChatHeader
+          activeChat={activeChat}
+          onEdit={() => setEditMode("edit")}
+      />
 
+      {editMode && (
+        <ChatDialog
+          mode="edit"
+          type={activeChat.type}
+          onClose={() => {setEditMode(null)}}
+          onSubmit={handleEditSubmit}
+        />
+      )}
+  
       <div className="date-wrapper">
         <div className="date">{date}</div>
       </div>

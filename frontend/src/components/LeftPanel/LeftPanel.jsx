@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { getWebSocket } from '../../modules/ws';
-import CreateDialog from './CreateDialog';
+import ChatDialog from '../Dialog/ChatDialog';
 
 
 const CHAT_TYPE_PRIVATE = 0;
@@ -45,10 +45,12 @@ const LeftPanel = ({ closePanel }) => {
   };
 
   const handleCreateChat = () => {
+    console.log("switched to chat mode");
     setCreateMode('chat');
   };
 
   const handleCreateChannel = () => {
+    console.log("switched to channel mode");
     setCreateMode('channel');
   };
 
@@ -60,7 +62,7 @@ const LeftPanel = ({ closePanel }) => {
         title: name,
         desc: description,
         avatar: photo,
-        member: selectedUserIds,
+        added_member_ids: selectedUserIds,
       });
 
     setCreateMode(null);
@@ -94,10 +96,10 @@ const LeftPanel = ({ closePanel }) => {
       </div>
 
       {createMode && (
-        <CreateDialog
-          mode={createMode}
-          users={interactedUsers}
-          onClose={() => setCreateMode(null)}
+        <ChatDialog
+          mode="create"
+          type={createMode}
+          onClose={() => {setCreateMode(null)}}
           onSubmit={handleCreateSubmit}
         />
       )}
