@@ -1,57 +1,34 @@
 package storage
 
 import (
-	"context"
 	"database/sql"
 	"io"
-	"net/http"
-	"path/filepath"
-	"time"
 
-	"github.com/google/uuid"
+	"api/util/seaweed"
 )
 
 type SeaweedStorage struct {
 	DB *sql.DB
-	SC SeaweedClient
+	SC seaweed.SeaweedClient
 }
 
-type SeaweedClient struct {
-	MasterURL string
-	VolumeURL string
-
-	Client *http.Client
-}
-
-func New(masterURL, volumeURL string) *Client {
-	return &Client{
-		MasterURL: masterURL,
-		VolumeURL: volumeURL,
-		Client: &http.Client{
-			Timeout: 30 * time.Second,
-		},
+func MakeSeaweedStorage(DB *sql.DB, masterURL, volumeURL string) SeaweedStorage {
+	return SeaweedStorage{
+		DB: DB,
+		SC: seaweed.MakeSeaweedClient(masterURL, volumeURL),
 	}
 }
 
-func (s *SeaweedStorage) Save(
-	ctx context.Context,
-	filename string,
-	mimeType string,
-	r io.Reader,
-) (int64, error) {
+func (s *SeaweedStorage) Save(filename string, mimeType string, r io.Reader) (int64, error) {
 
-	ext := filepath.Ext(filename)
-
-	key := uuid.NewString() + ext
-
-	size, err := s.Client.Upload(ctx, key, r)
+	key, size, err := s.SC.Upload(r, filename)
 	if err != nil {
 		return 0, err
 	}
 
 	var id int64
 
-	err = s.DB.QueryRowContext(ctx,
+	err = s.DB.QueryRow(
 		`
         INSERT INTO Messenger.MediaFiles
             (filename, storage_key, mime_type, size_bytes)
@@ -67,15 +44,12 @@ func (s *SeaweedStorage) Save(
 	return id, err
 }
 
-func (s *Storage) Open(
-	ctx context.Context,
-	mediaID int64,
-) (io.ReadCloser, string, error) {
+func (s *SeaweedStorage) Open(mediaID int64) (io.ReadCloser, string, error) {
 
 	var key string
 	var mime string
 
-	err := s.DB.QueryRowContext(ctx,
+	err := s.DB.QueryRow(
 		`
         SELECT storage_key,mime_type
         FROM Messenger.MediaFiles
@@ -88,23 +62,19 @@ func (s *Storage) Open(
 		return nil, "", err
 	}
 
-	r, err := s.Seaweed.Open(ctx, key)
+	r, err := s.SC.Open(key)
 
 	return r, mime, err
 }
 
-func (s *Storage) Delete(
-	ctx context.Context,
-	mediaID int64,
-) error {
-
+func (s *SeaweedStorage) Delete(mediaID int64) error {
 	var key string
 
-	err := s.DB.QueryRowContext(ctx,
+	err := s.DB.QueryRow(
 		`
-        SELECT storage_key
-        FROM Messenger.MediaFiles
+        DELETE FROM Messenger.MediaFiles
         WHERE media_id=$1
+		RETURNING storage_key
         `,
 		mediaID,
 	).Scan(&key)
@@ -113,17 +83,9 @@ func (s *Storage) Delete(
 		return err
 	}
 
-	if err := s.Seaweed.Delete(ctx, key); err != nil {
+	if err := s.SC.Delete(key); err != nil {
 		return err
 	}
-
-	_, err = s.DB.ExecContext(ctx,
-		`
-        DELETE FROM Messenger.MediaFiles
-        WHERE media_id=$1
-        `,
-		mediaID,
-	)
 
 	return err
 }

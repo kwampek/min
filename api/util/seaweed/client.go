@@ -2,7 +2,6 @@ package seaweed
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -13,13 +12,15 @@ import (
 
 type SeaweedClient struct {
 	MasterURL string
+	VolumeURL string
 
 	Client *http.Client
 }
 
-func New(masterURL string) *SeaweedClient {
-	return &SeaweedClient{
+func MakeSeaweedClient(masterURL, volumeURL string) SeaweedClient {
+	return SeaweedClient{
 		MasterURL: masterURL,
+		VolumeURL: volumeURL,
 		Client: &http.Client{
 			Timeout: 30 * time.Second,
 		},
@@ -27,38 +28,25 @@ func New(masterURL string) *SeaweedClient {
 }
 
 type assignResponse struct {
-	Fid       string `json:"fid"`
-	Url       string `json:"url"`
-	PublicURL string `json:"publicUrl"`
+	Fid string `json:"fid"`
 }
 
 type uploadResponse struct {
-	Name  string `json:"name"`
-	Size  int64  `json:"size"`
-	Error string `json:"error"`
+	Name string `json:"name"`
+	Size int64  `json:"size"`
 }
 
-func (c *SeaweedClient) Upload(
-	ctx context.Context,
-	filename string,
-	r io.Reader,
-) (fid string, size int64, err error) {
-
-	req, err := http.NewRequestWithContext(
-		ctx,
-		http.MethodGet,
-		c.MasterURL+"/dir/assign",
-		nil,
-	)
-	if err != nil {
-		return "", 0, err
-	}
-
-	resp, err := c.Client.Do(req)
+func (c *SeaweedClient) Upload(r io.Reader, filename string) (string, int64, error) {
+	resp, err := c.Client.Get(c.MasterURL + "/dir/assign")
 	if err != nil {
 		return "", 0, err
 	}
 	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return "", 0, fmt.Errorf("assign failed: %s", string(body))
+	}
 
 	var assign assignResponse
 	if err := json.NewDecoder(resp.Body).Decode(&assign); err != nil {
@@ -68,12 +56,16 @@ func (c *SeaweedClient) Upload(
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
 
+	if filename == "" {
+		filename = "file"
+	}
+
 	part, err := writer.CreateFormFile("file", filename)
 	if err != nil {
 		return "", 0, err
 	}
 
-	n, err := io.Copy(part, r)
+	size, err := io.Copy(part, r)
 	if err != nil {
 		return "", 0, err
 	}
@@ -82,10 +74,9 @@ func (c *SeaweedClient) Upload(
 		return "", 0, err
 	}
 
-	req, err = http.NewRequestWithContext(
-		ctx,
+	req, err := http.NewRequest(
 		http.MethodPost,
-		"http://"+assign.Url+"/"+assign.Fid,
+		fmt.Sprintf("%s/%s", c.VolumeURL, assign.Fid),
 		body,
 	)
 	if err != nil {
@@ -100,55 +91,34 @@ func (c *SeaweedClient) Upload(
 	}
 	defer resp.Body.Close()
 
-	var upload uploadResponse
-	if err := json.NewDecoder(resp.Body).Decode(&upload); err != nil {
-		return "", 0, err
+	if resp.StatusCode != http.StatusCreated &&
+		resp.StatusCode != http.StatusOK {
+		b, _ := io.ReadAll(resp.Body)
+		return "", 0, fmt.Errorf("upload failed: %s", string(b))
 	}
 
-	if upload.Error != "" {
-		return "", 0, fmt.Errorf(upload.Error)
-	}
-
-	return assign.Fid, n, nil
+	return assign.Fid, size, nil
 }
 
-func (c *SeaweedClient) Open(
-	ctx context.Context,
-	fid string,
-) (io.ReadCloser, error) {
-
-	req, err := http.NewRequestWithContext(
-		ctx,
-		http.MethodGet,
-		c.VolumeURL+"/"+fid,
-		nil,
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	resp, err := c.Client.Do(req)
+func (c *SeaweedClient) Open(fid string) (io.ReadCloser, error) {
+	// using only one volume
+	resp, err := c.Client.Get(fmt.Sprintf("%s/%s", c.VolumeURL, fid))
 	if err != nil {
 		return nil, err
 	}
 
 	if resp.StatusCode != http.StatusOK {
 		resp.Body.Close()
-		return nil, fmt.Errorf("seaweed returned %s", resp.Status)
+		return nil, fmt.Errorf("file not found")
 	}
 
 	return resp.Body, nil
 }
 
-func (c *SeaweedClient) Delete(
-	ctx context.Context,
-	fid string,
-) error {
-
-	req, err := http.NewRequestWithContext(
-		ctx,
+func (c *SeaweedClient) Delete(fid string) error {
+	req, err := http.NewRequest(
 		http.MethodDelete,
-		c.VolumeURL+"/"+fid,
+		fmt.Sprintf("%s/%s", c.VolumeURL, fid),
 		nil,
 	)
 	if err != nil {
@@ -163,8 +133,8 @@ func (c *SeaweedClient) Delete(
 
 	if resp.StatusCode != http.StatusAccepted &&
 		resp.StatusCode != http.StatusOK {
-
-		return fmt.Errorf("seaweed returned %s", resp.Status)
+		b, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("delete failed: %s", string(b))
 	}
 
 	return nil
