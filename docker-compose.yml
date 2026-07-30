@@ -1,45 +1,162 @@
 version: '3.8'
 
 services:
-  db:
-    image: postgres:15-alpine
-    # healthcheck:
-    #   test: ["CMD-SHELL", "pg_isready -U postgres -d myapp"]
-    #   interval: 5s
-    #   timeout: 5s
-    #   retries: 10
-    restart: unless-stopped
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: myapp
+  # === SeaweedFS Master ===
+  seaweed-master:
+    image: chrislusf/seaweedfs:4.06
+    container_name: seaweed-master
+    command: |
+      master
+      -ip=seaweed-master
+      -ip.bind=0.0.0.0
+      -port=9333
+      -grpcPort=19333
+      -mdir=/data/master
+      -peers=seaweed-master:9333
     ports:
-      - "5433:5432"
+      - "9333:9333"   # HTTP API
+      - "19333:19333" # gRPC
     volumes:
-      - ./scripts:/docker-entrypoint-initdb.d
-      - postgres_data:/var/lib/postgresql/data
+      - /opt/seaweedfs/data/master:/data/master
+    restart: unless-stopped
+    networks:
+      - seaweed-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9333/cluster/status"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # === SeaweedFS Volume ===
+  seaweed-volume:
+    image: chrislusf/seaweedfs:4.06
+    container_name: seaweed-volume
+    command: |
+      volume
+      -ip=seaweed-volume
+      -ip.bind=0.0.0.0
+      -port=8080
+      -grpcPort=18080
+      -mserver=seaweed-master:9333
+      -dir=/data/volume
+      -max=100
+      -dataCenter=dc1
+      -rack=rack1
+    ports:
+      - "8080:8080"   # HTTP API
+      - "18080:18080" # gRPC
+    volumes:
+      - /opt/seaweedfs/data/volume:/data/volume
+    restart: unless-stopped
+    depends_on:
+      - seaweed-master
+    networks:
+      - seaweed-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/status"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # === SeaweedFS Filer (S3-like API) ===
+  seaweed-filer:
+    image: chrislusf/seaweedfs:4.06
+    container_name: seaweed-filer
+    command: |
+      filer
+      -ip=seaweed-filer
+      -ip.bind=0.0.0.0
+      -port=8888
+      -grpcPort=18888
+      -master=seaweed-master:9333
+      -dir=/data/filer
+      -s3
+      -s3.config=/etc/seaweedfs/s3.json
+      -s3.port=8333
+      -s3.allowEmptyFolder=true
+    ports:
+      - "8888:8888"   # Filer HTTP
+      - "8333:8333"   # S3 API
+      - "18888:18888" # gRPC
+    volumes:
+      - /opt/seaweedfs/data/filer:/data/filer
+      - /opt/seaweedfs/s3.json:/etc/seaweedfs/s3.json:ro
+    restart: unless-stopped
+    depends_on:
+      - seaweed-master
+      - seaweed-volume
+    networks:
+      - seaweed-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8888/"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # === SeaweedFS S3 Gateway (альтернативный вариант) ===
+  # Можно использовать отдельный S3 гейтвей, если не хотите в filer
+  # seaweed-s3:
+  #   image: chrislusf/seaweedfs:4.06
+  #   container_name: seaweed-s3
+  #   command: |
+  #     s3
+  #     -ip.bind=0.0.0.0
+  #     -port=8333
+  #     -master=seaweed-master:9333
+  #     -config=/etc/seaweedfs/s3.json
+  #   ports:
+  #     - "8333:8333"
+  #   volumes:
+  #     - /opt/seaweedfs/s3.json:/etc/seaweedfs/s3.json:ro
+  #   depends_on:
+  #     - seaweed-master
+  #   networks:
+  #     - seaweed-net
+
+networks:
+  seaweed-net:
+    driver: bridge
+    name: seaweed-net
+
+#   db:
+#     image: postgres:15-alpine
+#     # healthcheck:
+#     #   test: ["CMD-SHELL", "pg_isready -U postgres -d myapp"]
+#     #   interval: 5s
+#     #   timeout: 5s
+#     #   retries: 10
+#     restart: unless-stopped
+#     environment:
+#       POSTGRES_USER: postgres
+#       POSTGRES_PASSWORD: postgres
+#       POSTGRES_DB: myapp
+#     ports:
+#       - "5433:5432"
+#     volumes:
+#       - ./scripts:/docker-entrypoint-initdb.d
+#       - postgres_data:/var/lib/postgresql/data
       
 
-  api:
-    build: ./api
-    restart: unless-stopped
-    ports:
-      - "8080:8080"
-    volumes:
-      - ./scripts:/app/scripts
-    environment:
-      DATABASE_URL: postgres://postgres:postgres@db:5432/myapp?sslmode=disable
-    depends_on:
-      - db
-        # condition: service_healthy
+#   api:
+#     build: ./api
+#     restart: unless-stopped
+#     ports:
+#       - "8080:8080"
+#     volumes:
+#       - ./scripts:/app/scripts
+#     environment:
+#       DATABASE_URL: postgres://postgres:postgres@db:5432/myapp?sslmode=disable
+#     depends_on:
+#       - db
+#         # condition: service_healthy
 
-  frontend:
-    build: ./frontend
-    restart: unless-stopped
-    ports:
-      - "8081:80"
-    depends_on:
-      - api
+#   frontend:
+#     build: ./frontend
+#     restart: unless-stopped
+#     ports:
+#       - "8081:80"
+#     depends_on:
+#       - api
 
-volumes:
-  postgres_data:
+# volumes:
+#   postgres_data:

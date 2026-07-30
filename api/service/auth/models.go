@@ -18,12 +18,13 @@ type LoginRequest struct {
 }
 
 type AuthResponse struct {
-	UserID      int       `json:"user_id"`
-	Login       string    `json:"login"`
-	Email       string    `json:"email"`
-	PhoneNumber string    `json:"phone_number"`
-	Token       string    `json:"token"`
-	CreatedAt   time.Time `json:"created_at"`
+	UserID        int       `json:"user_id"`
+	Login         string    `json:"login"`
+	Email         string    `json:"email"`
+	PhoneNumber   string    `json:"phone_number"`
+	AvatarPreview string    `json:"avatar_preview"`
+	Token         string    `json:"token"`
+	CreatedAt     time.Time `json:"created_at"`
 }
 
 type TokenInfo struct {

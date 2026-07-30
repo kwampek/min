@@ -2,6 +2,7 @@ CREATE SCHEMA IF NOT EXISTS Messenger;
 
 CREATE TABLE IF NOT EXISTS Messenger.MediaFiles (
     media_id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    preview TEXT DEFAULT NULL,
     storage_key TEXT NOT NULL,
     mime_type VARCHAR(64),
     size_bytes BIGINT,

@@ -3,11 +3,23 @@ import { useSelector, useDispatch } from 'react-redux';
 import { setActiveFolder, addFolder, editFolderName } from '../../store/slices/chatSlice';
 import { getWebSocket } from '../../modules/ws';
 
+const GetAvatar = ( {user} ) => {
+  if (user.avatarPreview) {
+    return <img className="chat-avatar" src={user.avatarPreview} />
+  }
+
+  return (
+  <div className="Profile">
+    <span className="avatar-letter">{user.login?.[0] || ''}</span>
+  </div>
+  );
+}
+
 const LeftSidebar = ({ isLeftPanelOpen, setLeftPanelOpen}) => {
   const dispatch = useDispatch();
 
   const { folders, activeFolderName} = useSelector((state) => state.chats);
-  const user_id = useSelector((state) => state.user.userId);
+  const avatarPreview = useSelector((state) => state.user.avatarPreview);
   const folders_list = Object.keys(folders);
   const [editingFolder, setEditingFolder] = useState(null);
   const [editValue, setEditValue] = useState('');
@@ -67,7 +79,6 @@ const LeftSidebar = ({ isLeftPanelOpen, setLeftPanelOpen}) => {
     ws.send(JSON.stringify({
       type: "edit_folder_name",
       payload: {
-        user_id: user_id,
         prev_name: editingFolder,
         new_name: trimmedName
       }
@@ -96,14 +107,11 @@ const LeftSidebar = ({ isLeftPanelOpen, setLeftPanelOpen}) => {
       ws.send(JSON.stringify({
         type: "create_folder",
         payload: {
-          user_id: user_id,
           folder_name: trimmedName
         }
       }));
     }
   };
-  
-  // TODO fix img
 
   return (
     <div className="left-sidebar">
@@ -147,7 +155,7 @@ const LeftSidebar = ({ isLeftPanelOpen, setLeftPanelOpen}) => {
       </button>
 
       <div className="profile" onClick={() => setLeftPanelOpen(!isLeftPanelOpen)}>
-        <img src="icons/me.jpg" />  
+        <GetAvatar user={user}/> 
       </div>
     </div>
   );

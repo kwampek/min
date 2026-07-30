@@ -1,21 +1,21 @@
 package media
 
-import "log"
-
-type Storage interface {
-}
+import (
+	"api/storage"
+)
 
 type MediaService struct {
-	Storage Storage
+	Storage storage.SeaweedStorage
 }
 
-func NewMediaService(Storage Storage) MediaService {
+func NewMediaService(Storage storage.SeaweedStorage) MediaService {
 	return MediaService{
 		Storage: Storage,
 	}
 }
+
 func (ms *MediaService) InsertMedia(string) (int, error) {
 	// TODO
-	log.Panic("UNIMPLEMENTED")
+
 	return 0, nil
 }

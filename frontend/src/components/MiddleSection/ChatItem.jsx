@@ -5,7 +5,7 @@ export const GetAvatar = ( {chat} ) => {
     return <img className="chat-avatar" src="icons/me.jpg" />
   }
 
-  if (!chat.avatar || !chat.avatar.Valid) {
+  if (!chat.avatarPreview || !chat.avatarPreview.Valid) {
     return (
     <div className="chat-avatar default-avatar">
       <span className="avatar-letter">{chat.title?.[0] || ''}</span>

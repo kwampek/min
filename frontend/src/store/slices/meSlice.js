@@ -7,7 +7,7 @@ const initialState = cachedUser || {
   userId: null,
   login: '',
   phoneNumber: '',
-  avatarLink: null,
+  avatarPreview: null,
   searchPrivacy: false,
   token: '',
   valid: false,
@@ -18,11 +18,11 @@ const meSlice = createSlice({
   initialState,
   reducers: {
     setUser: (state, action) => {
-      const { userId, login, phoneNumber, avatarLink, searchPrivacy } = action.payload;
+      const { userId, login, phoneNumber, avatarPreview, searchPrivacy } = action.payload;
       state.userId = userId;
       state.login = login;
       state.phoneNumber = phoneNumber;
-      state.avatarLink = avatarLink;
+      state.avatarPreview = avatarPreview;
       state.searchPrivacy = searchPrivacy;
       state.valid = true;
       saveUserToLocalStorage(state);
@@ -30,6 +30,7 @@ const meSlice = createSlice({
     setUserInAuth: (state, action) => {
       const data = action.payload;
       state.userId = data.user_id;
+      state.avatarPreview = data.avatar_preview;
       state.login = data.login;
       state.token = data.token;
       state.valid = true;

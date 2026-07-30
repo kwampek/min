@@ -20,7 +20,6 @@ func MakeSeaweedStorage(DB *sql.DB, masterURL, volumeURL string) SeaweedStorage 
 }
 
 func (s *SeaweedStorage) Save(filename string, mimeType string, r io.Reader) (int64, error) {
-
 	key, size, err := s.SC.Upload(r, filename)
 	if err != nil {
 		return 0, err
