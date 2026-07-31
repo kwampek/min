@@ -1,21 +1,25 @@
 package media
 
-import (
-	"api/storage"
-)
+import "api/models"
 
 type MediaService struct {
-	Storage storage.SeaweedStorage
+	Storage Storage
 }
 
-func NewMediaService(Storage storage.SeaweedStorage) MediaService {
+func NewMediaService(storage Storage) MediaService {
 	return MediaService{
-		Storage: Storage,
+		Storage: storage,
 	}
 }
 
-func (ms *MediaService) InsertMedia(string) (int, error) {
-	// TODO
+func (s *MediaService) CreateMedia(media, preview []byte, mime string) (int, error) {
+	return s.Storage.CreateMedia(media, preview, mime)
+}
 
-	return 0, nil
+func (s *MediaService) GetMediaWithPreview(id int) (*models.Media, error) {
+	return s.Storage.GetMediaWithPreview(id)
+}
+
+func (s *MediaService) DeleteMedia(id int) error {
+	return s.Storage.DeleteMedia(id)
 }

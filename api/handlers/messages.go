@@ -4,7 +4,6 @@ import (
 	"api/models"
 	"database/sql"
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
 	"strconv"
@@ -34,25 +33,39 @@ func (A *API) LoadAllMessagesHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 type WSAddMessagePayload struct {
-	ChatID       int    `json:"chat_id"`
-	ChatMemberId int    `json:"from_chat_member_id"`
-	Text         string `json:"text"`
-	Media        string `json:"media"`
+	ChatID       int                    `json:"chat_id"`
+	ChatMemberId int                    `json:"from_chat_member_id"`
+	Text         string                 `json:"text"`
+	MediaID      sql.NullInt64          `json:"media_id"`
+	Media        models.NewMediaRequest `json:"media"`
+}
+
+func (A *API) GetMediaIDFromMessage(mediaID sql.NullInt64, media models.NewMediaRequest) (sql.NullInt64, error) {
+	if !mediaID.Valid {
+		return mediaID, nil
+	}
+
+	if val, _ := mediaID.Value(); val.(int) != -1 {
+		return mediaID, nil
+	}
+
+	id, err := A.MediaService.CreateMedia(
+		media.Media,
+		media.Preview,
+		media.MimeType,
+	)
+
+	return sql.NullInt64{
+		Int64: int64(id),
+		Valid: true,
+	}, err
+
 }
 
 func (A *API) addMessageHandler(userID int, reqPayload WSAddMessagePayload) error {
-	var mediaID sql.NullInt64
-
-	if reqPayload.Media != "" {
-		id, err := A.MediaService.InsertMedia(reqPayload.Media)
-		if err != nil {
-			return fmt.Errorf("insert media: %w", err)
-		}
-
-		mediaID = sql.NullInt64{
-			Int64: int64(id),
-			Valid: true,
-		}
+	mediaID, err := A.GetMediaIDFromMessage(reqPayload.MediaID, reqPayload.Media)
+	if err != nil {
+		return err
 	}
 
 	message, err := A.MessageService.AddMessage(

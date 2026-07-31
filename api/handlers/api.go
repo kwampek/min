@@ -42,15 +42,14 @@ func New(db *sql.DB) *API {
 				7,
 			),
 		),
+		MessageService: messages.NewMessagesService(storage),
+		MediaService:   media.NewMediaService(storage),
+		ChatService:    chats.NewChatService(storage),
+		FolderService:  folders.NewFolderService(storage),
+		UserService:    users.NewUserService(storage),
 
 		WsService: ws.NewWsService(),
 	}
-
-	api.MessageService = messages.NewMessagesService(storage)
-	api.MediaService = media.NewMediaService(storage)
-	api.ChatService = chats.NewChatService(storage)
-	api.FolderService = folders.NewFolderService(storage)
-	api.UserService = users.NewUserService(storage)
 
 	api.WsRouter = NewWsRouter(api)
 

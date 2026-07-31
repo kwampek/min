@@ -1,90 +1,114 @@
 package storage
 
 import (
+	"api/models"
 	"database/sql"
-	"io"
-
-	"api/util/seaweed"
+	"fmt"
 )
 
-type SeaweedStorage struct {
-	DB *sql.DB
-	SC seaweed.SeaweedClient
-}
+func (s *Storage) CreateMedia(media, preview []byte, mime string) (int, error) {
+	var id int
 
-func MakeSeaweedStorage(DB *sql.DB, masterURL, volumeURL string) SeaweedStorage {
-	return SeaweedStorage{
-		DB: DB,
-		SC: seaweed.MakeSeaweedClient(masterURL, volumeURL),
-	}
-}
-
-func (s *SeaweedStorage) Save(filename string, mimeType string, r io.Reader) (int64, error) {
-	key, size, err := s.SC.Upload(r, filename)
-	if err != nil {
-		return 0, err
-	}
-
-	var id int64
-
-	err = s.DB.QueryRow(
-		`
+	err := s.DB.QueryRow(`
         INSERT INTO Messenger.MediaFiles
-            (filename, storage_key, mime_type, size_bytes)
-        VALUES ($1,$2,$3,$4)
+            (media, preview, mime_type, size_bytes)
+        VALUES
+            ($1, $2, $3, $4)
         RETURNING media_id
-        `,
-		filename,
-		key,
-		mimeType,
-		size,
+    `,
+		media,
+		preview,
+		mime,
+		len(media),
 	).Scan(&id)
 
 	return id, err
 }
 
-func (s *SeaweedStorage) Open(mediaID int64) (io.ReadCloser, string, error) {
+func (s *Storage) GetImage(id int, getPreview bool) ([]byte, string, error) {
+	var (
+		data []byte
+		mime string
+	)
 
-	var key string
-	var mime string
-
-	err := s.DB.QueryRow(
-		`
-        SELECT storage_key,mime_type
-        FROM Messenger.MediaFiles
-        WHERE media_id=$1
-        `,
-		mediaID,
-	).Scan(&key, &mime)
-
-	if err != nil {
-		return nil, "", err
+	var fieldName string
+	if getPreview {
+		fieldName = "preview"
+	} else {
+		fieldName = "media"
 	}
 
-	r, err := s.SC.Open(key)
+	query := fmt.Sprintf(`
+        SELECT %s, mime_type
+        FROM Messenger.MediaFiles
+        WHERE media_id = $1
+    `, fieldName)
 
-	return r, mime, err
+	err := s.DB.QueryRow(query, id).Scan(&data, &mime)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, "", fmt.Errorf("media with id %d not found", id)
+		}
+		return nil, "", fmt.Errorf("failed to get image: %w", err)
+	}
+
+	if data == nil {
+		if getPreview {
+			return nil, "", fmt.Errorf("preview not available for media %d", id)
+		}
+		return nil, "", fmt.Errorf("full media not available for media %d", id)
+	}
+
+	return data, mime, nil
 }
 
-func (s *SeaweedStorage) Delete(mediaID int64) error {
-	var key string
+func (s *Storage) GetMediaWithPreview(id int) (*models.Media, error) {
+	var m models.Media
 
-	err := s.DB.QueryRow(
-		`
-        DELETE FROM Messenger.MediaFiles
-        WHERE media_id=$1
-		RETURNING storage_key
-        `,
-		mediaID,
-	).Scan(&key)
+	err := s.DB.QueryRow(`
+        SELECT
+            media_id,
+            media,
+            preview,
+            mime_type,
+            size_bytes,
+            created_at
+        FROM Messenger.MediaFiles
+        WHERE media_id = $1
+    `, id).Scan(
+		&m.ID,
+		&m.Media,
+		&m.Preview,
+		&m.MimeType,
+		&m.SizeBytes,
+		&m.CreatedAt,
+	)
 
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	if err := s.SC.Delete(key); err != nil {
-		return err
+	return &m, nil
+}
+
+func (s *Storage) DeleteMedia(id int) error {
+	result, err := s.DB.Exec(`
+        DELETE FROM Messenger.MediaFiles
+        WHERE media_id = $1
+    `, id)
+
+	if err != nil {
+		return fmt.Errorf("failed to hard delete media: %w", err)
 	}
 
-	return err
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get rows affected: %w", err)
+	}
+
+	if rowsAffected == 0 {
+		return fmt.Errorf("media with id %d not found", id)
+	}
+
+	return nil
 }
